@@ -1,0 +1,62 @@
+.content {
+  margin-left: 250px;  /* Смещение вправо, чтобы не заходить под сайдбар */
+  padding: 20px;
+  overflow-x: auto; /* Для горизонтальной прокрутки, если таблица станет слишком широкой */
+}
+
+.table-container {
+  max-width: calc(100% - 20px); /* Сужает до доступной ширины */
+  overflow-x: auto; /* Прокрутка для широкой таблицы */
+  padding-bottom: 10px; /* Отступ внизу для удобства */
+}
+
+.requests-table {
+  width: 100%; /* Таблица занимает всю ширину контейнера */
+  border-collapse: collapse; /* Убирает промежутки между ячейками */
+}
+
+.requests-table th, .requests-table td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+  white-space: nowrap; /* Сохраняет содержимое в одну строку */
+}
+
+.requests-table th {
+  background-color: #f4f4f4;
+  cursor: pointer; /* Указатель при наведении на заголовки */
+}
+
+.requests-table th:hover {
+  background-color: #eaeaea;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.pagination-container button {
+  padding: 10px 15px;
+  margin: 0 5px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.pagination-container button:hover {
+  background-color: #0056b3;
+}
+
+.pagination-container button.active {
+  background-color: #0056b3;
+  font-weight: bold;
+}
+
+.pagination-container button:disabled {
+  background-color: #d3d3d3;
+  cursor: not-allowed;
+}

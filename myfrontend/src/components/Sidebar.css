@@ -1,0 +1,86 @@
+/* Sidebar styling */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px; /* Сделал шире для большего комфорта */
+  height: 100%;
+  background-color: #535353;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 10; /* чтобы сайдбар всегда был сверху */
+}
+
+.sidebar ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  margin-top: 10px; /* Уменьшить отступ сверху у списка */
+}
+
+.sidebar ul li {
+  margin-bottom: 8px; /* Уменьшить отступ между элементами списка */
+}
+
+.sidebar ul li a {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+  display: block;
+  padding: 5px 10px;
+}
+
+.sidebar ul li a:hover {
+  text-decoration: underline;
+  background-color: #3a3a3a;
+}
+
+.user-info {
+  padding: 10px;
+  background-color: #444;
+  color: white;
+  cursor: pointer;
+  text-align: center;
+  padding-bottom: 20px;
+}
+
+.user-name {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.logout-button {
+  padding: 5px 10px;
+  background-color: #e74c3c;
+  color: white;
+  text-align: center;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background-color: #c0392b;
+}
+
+/* Content adjustment */
+.content {
+  margin-left: 220px; /* Оставляем достаточно места для Sidebar */
+  padding: 20px;
+}
+
+.sidebar li a.active {
+  color: #3498db; /* Цвет активной ссылки */
+  font-weight: bold;
+  background-color: #2c3e50; /* Выделение активной ссылки фоном */
+}
+
+.teez-studio-link {
+  color: #2ecc71; /* Зеленый цвет */
+  font-size: 20px;
+  font-weight: bold;
+  text-decoration: none;
+  display: block;
+  text-align: center;
+  margin-bottom: 10px; /* Уменьшите отступ, например, до 10px */
+}

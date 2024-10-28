@@ -1,0 +1,89 @@
+/* Main container for the products page */
+.admin-products-container {
+    margin-left: 280px; /* Push the content right to accommodate the sidebar */
+    padding: 20px;
+  }
+  
+  /* Admin Products Table styling */
+  .admin-products-table {
+    width: 100%;
+    border-collapse: collapse;
+    padding-left: 250px;
+  }
+  
+  .admin-products-table th,
+  .admin-products-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  
+  .admin-products-table th {
+    background-color: #4CAF50;
+    color: white;
+  }
+  
+  .admin-products-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+  
+  .admin-products-table tr:hover {
+    background-color: #ddd;
+  }
+  
+  /* Pagination controls */
+  .pagination-controls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .pagination-controls button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .pagination-controls button:disabled {
+    background-color: #ccc;
+  }
+  
+  .pagination-controls span {
+    font-size: 16px;
+  }
+  
+  .modal {
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+  }
+  
+  .modal-content {
+    background-color: #fff;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 30%;
+  }
+  
+  .close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  
+  .close-button:hover,
+  .close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  

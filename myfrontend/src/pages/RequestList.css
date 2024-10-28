@@ -1,0 +1,71 @@
+/* RequestList.css */
+
+/* Основной контейнер */
+.request-list-container {
+    margin: 20px auto;
+    max-width: 800px;
+  }
+  
+  /* Поле поиска */
+  .search-input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+  }
+  
+  /* Таблица заявок */
+  .request-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  
+  .request-table th, 
+  .request-table td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  
+  .request-table th {
+    background-color: #f5f5f5;
+    cursor: pointer;
+  }
+  
+  .request-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
+  .request-table tr:hover {
+    background-color: #f1f1f1;
+  }
+  
+  /* Пагинация */
+  .pagination-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  
+  .pagination-button {
+    padding: 10px 15px;
+    margin: 0 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+    cursor: pointer;
+  }
+  
+  .pagination-button.active {
+    background-color: #007bff;
+    color: #fff;
+  }
+  
+  .pagination-button:hover {
+    background-color: #007bff;
+    color: #fff;
+  }
+  

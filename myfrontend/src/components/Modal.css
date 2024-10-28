@@ -1,0 +1,65 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 600px;
+    max-width: 90%;
+  }
+  
+  .barcodes-list {
+    margin-bottom: 20px;
+  }
+  
+  .barcode-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  .remove-btn {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    color: red;
+  }
+  
+  .add-barcode {
+    margin-bottom: 20px;
+  }
+  
+  .modal-actions {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .save-btn {
+    background-color: green;
+    color: white;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+  
+  .cancel-btn {
+    background-color: darkred;
+    color: white;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+  
+  .error-message {
+    color: red;
+    margin-top: 10px;
+  }
+  

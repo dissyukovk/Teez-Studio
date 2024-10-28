@@ -1,0 +1,45 @@
+.main-content {
+  padding-left: 250px;
+  padding-right: 20px;
+  padding-top: 20px;
+}
+
+.table-container {
+  margin: 0 auto;
+  max-width: 1200px;
+}
+
+.requests-table, .invoices-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.requests-table th, .requests-table td, .invoices-table th, .invoices-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.pagination {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.action-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.action-button:hover {
+  background-color: #0056b3;
+}
+
+p {
+  margin-top: 20px;
+  color: #333;
+}

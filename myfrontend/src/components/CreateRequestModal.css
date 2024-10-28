@@ -1,0 +1,63 @@
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .modal-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    width: 500px;
+  }
+  
+  h2 {
+    margin-bottom: 15px;
+  }
+  
+  .primary-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    margin-right: 10px;
+  }
+  
+  .secondary-button {
+    background-color: #f44336;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .scanned-barcodes-table {
+    margin-top: 20px;
+  }
+  
+  .scanned-barcodes-table table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .scanned-barcodes-table th, .scanned-barcodes-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+  
+  .scanned-barcodes-table th {
+    background-color: #f2f2f2;
+  }
+  
+  .error-message {
+    color: red;
+    margin-top: 10px;
+  }
+  
