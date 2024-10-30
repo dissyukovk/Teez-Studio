@@ -3,14 +3,37 @@
   position: fixed;
   left: 0;
   top: 0;
-  width: 220px; /* Сделал шире для большего комфорта */
+  width: 220px;
   height: 100%;
   background-color: #535353;
   padding: 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  z-index: 10; /* чтобы сайдбар всегда был сверху */
+  z-index: 10;
+  transition: transform 0.3s ease;
+}
+
+.sidebar.closed {
+  transform: translateX(-100%); /* Скрытие сайдбара */
+}
+
+.sidebar.open {
+  transform: translateX(0); /* Показ сайдбара */
+}
+
+/* Toggle button for sidebar */
+.toggle-sidebar-btn {
+  display: none;
+  position: absolute;
+  top: 10px;
+  left: 230px;
+  background-color: #535353;
+  color: white;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  z-index: 11;
 }
 
 .sidebar ul {
@@ -83,4 +106,15 @@
   display: block;
   text-align: center;
   margin-bottom: 10px; /* Уменьшите отступ, например, до 10px */
+}
+
+@media (max-width: 768px) {
+  .toggle-sidebar-btn {
+    display: block; /* Показ кнопки на мобильных устройствах */
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 20px;
+  }
 }

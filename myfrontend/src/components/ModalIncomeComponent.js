@@ -6,6 +6,7 @@ import authService from '../services/authService';
 const ModalIncomeComponent = ({ closeModal }) => {
   const [newBarcode, setNewBarcode] = useState('');
   const [scannedBarcodes, setScannedBarcodes] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleAddBarcode = async (e) => {
     e.preventDefault();
@@ -23,9 +24,10 @@ const ModalIncomeComponent = ({ closeModal }) => {
       ]);
   
       setNewBarcode('');
+      setErrorMessage('');
     } catch (error) {
       console.error('Ошибка при проверке штрихкода и заказа', error);
-      alert('Ошибка при проверке штрихкода. Попробуйте снова!');
+      setErrorMessage('Ошибка при проверке штрихкода. Попробуйте снова!');
       setNewBarcode('');
     }
   };  
@@ -58,33 +60,24 @@ const ModalIncomeComponent = ({ closeModal }) => {
   
   const handleCreateRequest = async () => {
     try {
-      const barcodesToCreate = scannedBarcodes.map(item => ({ barcode: item.barcode }));
-      const userId = await authService.getCurrentUserId(); // Получаем текущий ID пользователя
-  
-      if (!userId) {
-        throw new Error("Не удалось получить идентификатор пользователя.");
-      }
-  
-      // Шаг 1: Создаем заявку
-      const response = await productService.createRequest(barcodesToCreate); // Вызов функции создания заявки
-  
-      if (response && response.requestNumber) {
-        console.log(`Заявка создана с номером: ${response.requestNumber}`);
-  
-        // Шаг 2: После успешного создания заявки вызываем функцию приемки
-        await productService.updateProductStatusIncome(barcodesToCreate, userId, 3); // Статус "Принято" (3)
-  
-        alert('Заявка создана и товары приняты.');
-        closeModal();  // Закрываем модальное окно после создания заявки и приемки
-      } else {
-        throw new Error("Ошибка при создании заявки.");
-      }
+        const barcodesToCreate = scannedBarcodes.map(item => item.barcode);
+        const userId = await authService.getCurrentUserId();
+        if (!userId) throw new Error("Не удалось получить идентификатор пользователя.");
+
+        const response = await productService.createRequest(barcodesToCreate);
+        if (response && response.requestNumber) {
+            await productService.updateProductStatusIncome(barcodesToCreate, userId, 3);
+            alert('Заявка создана и товары приняты.');
+            closeModal();
+        } else {
+            throw new Error("Ошибка при создании заявки.");
+        }
     } catch (error) {
-      console.error('Ошибка при создании заявки и приемке', error);
-      alert('Ошибка при создании заявки и приемке.');
+        console.error('Ошибка при создании заявки и приемке:', error);
+        alert('Ошибка при создании заявки и приемке.');
     }
-  };  
-  
+  };
+
   return (
     <div className="modal-backdrop">
       <div className="modal-container">
@@ -99,6 +92,11 @@ const ModalIncomeComponent = ({ closeModal }) => {
           />
           <button type="button" className="primary-button" onClick={handleAddBarcode}>Добавить штрихкод</button>
         </form>
+
+        {/* Добавленный счетчик количества товаров */}
+        <p>Товаров: {scannedBarcodes.length}</p>
+
+        {errorMessage && <div className="error-message">{errorMessage}</div>}
         <div className="barcode-list">
           {scannedBarcodes.map((item, index) => (
             <div key={index} className="barcode-item">
@@ -106,6 +104,7 @@ const ModalIncomeComponent = ({ closeModal }) => {
             </div>
           ))}
         </div>
+        
         <div className="modal-actions">
           <button onClick={handleCreateRequest} className="yellow-button">Создать заявку</button>
           <button onClick={handleAccept} className="green-button">Принять</button>
@@ -115,7 +114,5 @@ const ModalIncomeComponent = ({ closeModal }) => {
     </div>
   );
 };
-
-
 
 export default ModalIncomeComponent;

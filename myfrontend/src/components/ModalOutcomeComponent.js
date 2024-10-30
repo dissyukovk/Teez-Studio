@@ -12,20 +12,20 @@ const ModalOutcomeComponent = ({ closeModal }) => {
   const handleAddBarcode = async (e) => {
     e.preventDefault();
     if (!newBarcode) return;
-  
+
     const isDuplicate = scannedBarcodes.some((item) => item.barcode === newBarcode);
     if (isDuplicate) {
       setErrorMessage('Дублирование штрихкода. Штрихкод уже просканирован');
       setNewBarcode('');
       return;
     }
-  
+
     try {
       const response = await productService.getLastRequestForBarcode(newBarcode);
       const statusName = response.statusName;
       const requestNumber = response.requestNumber ? response.requestNumber : 'Нет заявок';
       const isRedText = ['Черновик', 'Создана', 'На съемке', 'Проверка фото', 'Распределение ретуши', 'В ретуши', 'Проверка ретуши'].includes(statusName);
-  
+
       setScannedBarcodes((prevBarcodes) => [
         {
           barcode: newBarcode,
@@ -42,7 +42,7 @@ const ModalOutcomeComponent = ({ closeModal }) => {
       alert('Ошибка при проверке штрихкода. Попробуйте снова!');
       setNewBarcode('');
     }
-  };  
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -54,14 +54,14 @@ const ModalOutcomeComponent = ({ closeModal }) => {
     try {
       const barcodesToSend = scannedBarcodes.map(item => item.barcode);
       const userId = await authService.getCurrentUserId();
-    
+
       if (!userId) {
         throw new Error("Не удалось получить идентификатор пользователя.");
       }
-  
+
       const invoiceNumber = await invoiceService.createInvoice(barcodesToSend, userId);
       await productService.updateProductStatusOutcome(barcodesToSend, userId, 4);
-    
+
       alert(`Товары отправлены. Накладная № ${invoiceNumber}`);
       closeModal();
     } catch (error) {
@@ -82,7 +82,7 @@ const ModalOutcomeComponent = ({ closeModal }) => {
       // Создаем накладную
       const invoiceNumber = await invoiceService.createInvoice(barcodesToSend, userId);
       await productService.updateProductStatusOutcome(barcodesToSend, userId, 4);
-      
+
       // Открываем страницу печати накладной в новой вкладке
       window.open(`/invoices/${invoiceNumber}`, '_blank');
       closeModal();
@@ -106,6 +106,10 @@ const ModalOutcomeComponent = ({ closeModal }) => {
           />
           <button type="button" className="primary-button" onClick={handleAddBarcode}>Добавить штрихкод</button>
         </form>
+        
+        {/* Добавленный счетчик количества товаров */}
+        <p>Товаров: {scannedBarcodes.length}</p>
+
         {errorMessage && <div className="error-message">{errorMessage}</div>}
         <div className="barcode-list">
           {scannedBarcodes.map((item, index) => (

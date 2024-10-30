@@ -17,7 +17,7 @@ const PhPhotographerRequests = ({ user }) => {
       console.error('User ID not found');
       return;
     }
-
+  
     try {
       const response = await requestService.getRequests({
         photographer: user.id,  // Фильтрация по ID фотографа
@@ -32,6 +32,7 @@ const PhPhotographerRequests = ({ user }) => {
       console.error('Ошибка при загрузке заявок:', error);
     }
   }, [user, searchTerm, page]);
+ 
 
   useEffect(() => {
     fetchRequests();
@@ -87,7 +88,7 @@ const PhPhotographerRequests = ({ user }) => {
                 {request.RequestNumber}
               </td>
               <td>{new Date(request.creation_date).toLocaleDateString()}</td>
-              <td>{user.first_name}</td>
+              <td>{`${request.photographer_first_name} ${request.photographer_last_name}`}</td>
               <td>{request.total_products}</td>
             </tr>
           ))}

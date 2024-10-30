@@ -25,14 +25,36 @@ const InvoiceView = () => {
   }, [invoiceNumber]);
 
   const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
     const printContent = document.getElementById('invoice-content').innerHTML;
-    const originalContent = document.body.innerHTML;
-
-    document.body.innerHTML = printContent;
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload(); // Чтобы восстановить функционал после печати
+  
+    printWindow.document.open();
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Печать накладной</title>
+          <style>
+            /* Добавьте стили для печати */
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .invoice-products-table { width: 100%; border-collapse: collapse; }
+            .invoice-products-table th, .invoice-products-table td { border: 1px solid #ddd; padding: 8px; }
+            .signature-section { margin-top: 20px; display: flex; justify-content: space-between; }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  
+    // Печать с задержкой для загрузки содержимого
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
   };
+  
 
   if (loading) return <div>Загрузка...</div>;
   if (error) return <div>{error}</div>;

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.db.models import Count
-from .models import Product, STRequestProduct, STRequest, Invoice, InvoiceProduct, ProductMoveStatus, ProductOperation, Order, OrderStatus, OrderProduct, ProductCategory, RetouchStatus, STRequestStatus
+from .models import Product, STRequestProduct, STRequest, Invoice, InvoiceProduct, ProductMoveStatus, ProductOperation, Order, OrderStatus, OrderProduct, ProductCategory, RetouchStatus, STRequestStatus, ProductOperationTypes
 
 class UserSerializer(serializers.ModelSerializer):
     groups = serializers.SerializerMethodField()
@@ -14,6 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
         return [group.name for group in obj.groups.all()]
 
 class ProductSerializer(serializers.ModelSerializer):
+    move_status_id = serializers.IntegerField(source='move_status.id', allow_null=True, default=None)
     move_status = serializers.CharField(source='move_status.name', default='N/A')
     request_number = serializers.SerializerMethodField()
     invoice_number = serializers.SerializerMethodField()
@@ -79,7 +80,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ['barcode', 'name', 'category_id', 'category_name', 'category_reference_link', 'seller', 'income_date', 'outcome_date', 
                   'income_stockman', 'outcome_stockman', 'in_stock_sum', 'cell', 'request_number', 
-                  'invoice_number', 'move_status', 'photographer', 'retoucher', 'request_status', 
+                  'invoice_number', 'move_status_id', 'move_status', 'photographer', 'retoucher', 'request_status', 
                   'photos_link', 'retouch_link']
 
 class STRequestStatusSerializer(serializers.ModelSerializer):
@@ -141,9 +142,16 @@ class StatusSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 class ProductOperationSerializer(serializers.ModelSerializer):
+    operation_type_name = serializers.CharField(source='operation_type.name', read_only=True)
+    user_full_name = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductOperation
-        fields = '__all__'
+        fields = ['operation_type_name', 'user_full_name', 'date', 'comment']
+
+    def get_user_full_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}" if obj.user else "Unknown"
+
 
 class OrderStatusSerializer(serializers.ModelSerializer):
     class Meta:
@@ -166,3 +174,4 @@ class RetouchStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = RetouchStatus
         fields = ['id', 'name']
+

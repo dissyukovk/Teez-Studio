@@ -17,6 +17,9 @@ import OrderTable from './components/OrderTable';
 import OrderView from './pages/OrderView';
 import InvoiceView from './pages/InvoiceView'
 import CreateOrder from './components/CreateOrder';
+import PrintBarcode from './components/PrintBarcode';
+import CurrentProductsFS from './components/CurrentProductsFS';
+import BarcodeHistory from './components/BarcodeHistory'; 
 
 // Import components for Senior Photographer
 import PhDistributeRequests from './pages/PhDistributeRequests';
@@ -125,6 +128,18 @@ const App = () => {
           <Route
             path="/requests/retoucher"
             element={isAuthenticated ? <ReRequests user={user} /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/print-barcode"
+            element={isAuthenticated ? <PrintBarcode /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/current-products-fs"
+            element={isAuthenticated ? <CurrentProductsFS /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/barcode-history"
+            element={isAuthenticated ? <BarcodeHistory /> : <Navigate to="/login" />}
           />
         </Routes>
       </div>

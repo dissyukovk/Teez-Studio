@@ -6,12 +6,11 @@ const RequestModalPh = ({ isOpen, onClose, requestNumber }) => {
   const [barcodes, setBarcodes] = useState([]);
   const [status, setStatus] = useState('');
   const [comment, setComment] = useState('');
-  const [photosLink, setPhotosLink] = useState(''); // Ссылка на фото
+  const [photosLink, setPhotosLink] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (isOpen && requestNumber) {
-      // Получаем детали заявки
       requestService.getRequestDetails(requestNumber)
         .then(response => {
           setBarcodes(response.barcodes);
@@ -26,17 +25,13 @@ const RequestModalPh = ({ isOpen, onClose, requestNumber }) => {
   }, [isOpen, requestNumber]);
 
   const handleMarkForReview = () => {
-    // Проверяем, заполнено ли поле ссылки
     if (!photosLink) {
-      alert("Вставьте ссылку на фото"); // Системный алерт
+      alert("Вставьте ссылку на фото");
       return;
     }
   
-    // Если ссылка заполнена, обновляем статус заявки
     requestService.updateRequestStatus(requestNumber, 4, photosLink)
-      .then(() => {
-        onClose();
-      })
+      .then(() => onClose())
       .catch(error => {
         console.error('Ошибка при обновлении статуса:', error);
         setErrorMessage('Не удалось обновить статус');
@@ -52,7 +47,7 @@ const RequestModalPh = ({ isOpen, onClose, requestNumber }) => {
           </div>
           <p>Статус: {status}</p>
 
-          <div className="barcodes-list">
+          <div className="scrollable-container">
             <h3>Товары:</h3>
             {barcodes.map((barcode) => (
               <div key={barcode.barcode} className="barcode-item">

@@ -1,0 +1,61 @@
+.print-barcode-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+  
+  .input-container {
+    margin: 10px 0;
+  }
+  
+  .input-container input {
+    font-size: 16px;
+    padding: 8px;
+    width: 200px;
+  }
+  
+  .barcode-display {
+    width: 40mm;
+    height: 30mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+  }
+  
+  .print-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    margin-top: 20px;
+    cursor: pointer;
+  }
+  
+/* Скрываем элементы с классом "no-print" при печати */
+@media print {
+    .no-print {
+      display: none;
+    }
+  
+    .print-barcode-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  
+    .barcode-display {
+      margin: 0;
+      width: 40mm;
+      height: 30mm;
+    }
+  
+    body * {
+      visibility: hidden;
+    }
+  
+    .barcode-display, .barcode-display * {
+      visibility: visible;
+    }
+  }
+  

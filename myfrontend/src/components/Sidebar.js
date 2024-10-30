@@ -4,13 +4,21 @@ import './Sidebar.css';
 
 function Sidebar({ user }) {
   const [showLogout, setShowLogout] = useState(false); // Состояние для отображения кнопки выхода
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   if (!user || !user.groups) {
     return null; // If no user or groups, don't render the sidebar
   }
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+      <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
+        {isSidebarOpen ? 'Закрыть' : 'Меню'}
+      </button>
       {/* TEEZ STUDIO Logo Link */}
       <NavLink to="/" className="teez-studio-link">
         TEEZ STUDIO
@@ -31,6 +39,9 @@ function Sidebar({ user }) {
             </li>
             <li>
               <NavLink to="/orders" activeClassName="active">Заказ (товаровед)</NavLink> {/* Новый пункт */}
+            </li>
+            <li>
+              <NavLink to="/print-barcode" activeClassName="active">Печать ШК</NavLink>
             </li>
           </>
         )}
@@ -91,6 +102,18 @@ function Sidebar({ user }) {
               </li>
             </>
           )}
+          {/* Warehouse Section */}
+            {user.groups.includes('warehouse') && (
+              <>
+              <li>
+                <NavLink to="/current-products-fs" activeClassName="active">
+                  Текущие товары на фс
+                </NavLink>
+              </li>
+              <li><NavLink to="/barcode-history">История по штрихкоду</NavLink></li>
+              </>
+              
+            )}
 
 
       </ul>

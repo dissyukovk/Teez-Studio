@@ -18,13 +18,12 @@ const ReRequests = ({ user }) => {
       console.error('User ID not found');
       return;
     }
-
+  
     try {
       const response = await requestService.getRequests({
-        userId: user.id,
-        role: 'retoucher',
-        status: 6,
-        search: searchTerm,
+        retoucher: user.id, // Передаем ID текущего пользователя как ретушера
+        status: 6,          // Фильтрация по статусу, соответствующему "на ретуши"
+        requestNumber: searchTerm || undefined,
         sortField,
         sortOrder,
         page,
@@ -36,6 +35,7 @@ const ReRequests = ({ user }) => {
       console.error('Ошибка при загрузке заявок:', error);
     }
   }, [user, searchTerm, sortField, sortOrder, page]);
+ 
 
   useEffect(() => {
     fetchRequests();
@@ -89,7 +89,7 @@ const ReRequests = ({ user }) => {
             <tr key={request.RequestNumber} onClick={() => handleRequestClick(request)}>
               <td>{request.RequestNumber}</td>
               <td>{new Date(request.creation_date).toLocaleDateString()}</td>
-              <td>{user.first_name} {user.last_name}</td>
+              <td>{request.retoucher_first_name} {request.retoucher_last_name || 'Не назначен'}</td>
               <td>{request.total_products}</td>
             </tr>
           ))}

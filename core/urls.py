@@ -51,7 +51,9 @@ from .views import (
     update_order_status,
     get_invoice_details,
     check_barcodes,
-    create_order
+    create_order,
+    upload_products_batch,
+    get_history_by_barcode
 )
 
 class UserDetailView(APIView):
@@ -93,7 +95,8 @@ urlpatterns = [
     path('api/invoices/<str:invoice_number>/details/', get_invoice_details, name='get-invoice-details'),
     path('api/check-barcodes/', check_barcodes, name='check_barcodes'),    
     path('api/orders/create/', create_order, name='create_order'),
-
+    path('api/upload-batch/', upload_products_batch, name='upload-products-batch'),
+    path('api/product-history/<str:barcode>/', get_history_by_barcode, name='history_by_barcode'),
 
     # Основные API
     path('api/products/', product_list, name='product-list'),
@@ -133,7 +136,7 @@ urlpatterns = [
     
     # Статусы и накладные
     path('api/statuses/', StatusesListView.as_view(), name='statuses-list'),
-    path('api/products/bulk-upload/', bulk_upload_products, name='bulk-upload-products'),
+    path('api/products/bulk-upload/', bulk_upload_products, name='bulk-upload'),
     path('api/invoices-list/filter/', invoice_list, name='invoice-list-filter'),
     
     # Фильтрация заявок и пользователей

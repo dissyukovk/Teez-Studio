@@ -3,6 +3,13 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import './AdminProducts.css';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token'); // Получаем токен из локального хранилища
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+};
+
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);  // Initialize products as an empty array
   const [loading, setLoading] = useState(true);
@@ -15,14 +22,16 @@ const AdminProducts = () => {
   const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://192.168.1.15:8000/api/products/?page=${page}`);
+      const response = await axios.get(`http://192.168.6.17:8000/api/products/?page=${page}`, {
+        headers: getAuthHeaders(), // Добавляем заголовки аутентификации
+      });
       console.log('Response Data:', response.data);
   
       if (response.data && response.data.results) {
-        setProducts(response.data.results); // Check that 'results' exists
-        setTotalPages(Math.ceil(response.data.count / 100)); // Assuming 100 items per page
+        setProducts(response.data.results); // Проверяем, что 'results' существует
+        setTotalPages(Math.ceil(response.data.count / 100)); // Предполагаем, что 100 элементов на странице
       } else {
-        setProducts([]); // Fallback to an empty array if 'results' is undefined
+        setProducts([]); // Если 'results' не определен, возвращаем пустой массив
       }
   
       setLoading(false);
@@ -53,75 +62,55 @@ const AdminProducts = () => {
     const reader = new FileReader();
 
     reader.onload = (event) => {
-      const data = new Uint8Array(event.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-      // Check the parsed data structure
-      console.log("Parsed file data:", jsonData);
+        // Отладка данных после извлечения
+        console.log("Сырые данные из Excel:", jsonData);
 
-      setFileData(jsonData);  // Save file data to state
+        // Преобразуем строки в объекты
+        const formattedData = jsonData.slice(1).map((row, index) => ({
+            barcode: row[0] ? String(row[0]).trim() : null,
+            name: row[1] ? String(row[1]).trim() : null,
+            category_id: row[2] ? Number(row[2]) : null,
+            seller: row[3] ? Number(row[3]) : null,
+            in_stock_sum: row[4] ? Number(row[4]) : 0,
+            cell: row[5] ? String(row[5]).trim() : null
+        }));
+
+        console.log("Форматированные данные для отправки:", formattedData);
+
+        setFileData(formattedData);
     };
 
     reader.readAsArrayBuffer(file);
-  };
+};
 
-  const handleSubmit = async () => {
-    if (!fileData) {
-      alert('Пожалуйста, выберите файл!');
-      return;
-    }
+const handleSubmit = async () => {
+  if (!fileData) {
+    alert('Пожалуйста, выберите файл!');
+    return;
+  }
 
-    const validData = fileData.slice(1).map((row) => {
-      return {
-        barcode: row[0], // Штрихкод (обязательный)
-        name: row[1], // Наименование (обязательное)
-        category_id: Number(row[2]), // ID Категории (обязательный, преобразован в число)
-        seller: Number(row[3]), // ID Продавца (обязательный, преобразован в число)
-        in_stock_sum: Number(row[4]), // Остаток на складе (обязательный, преобразован в число)
-        cell: row[5], // Ячейка (обязательная)
-        income_date: row[6] || null, // Дата приемки (необязательная)
-        outcome_date: row[7] || null, // Дата отправки (необязательная)
-        income_stockman: Number(row[8]) || null, // Товаровед приемки (необязательная)
-        outcome_stockman: Number(row[9]) || null, // Товаровед отправки (необязательная)
-        move_status: Number(row[10]) || null, // Статус движения товара (необязательная)
-        request_number: row[11] || null, // Заявка (номер) (необязательная)
-        invoice_number: row[12] || null, // Накладная (номер) (необязательная)
-        photographer: Number(row[13]) || null, // Фотограф (необязательная)
-        retoucher: Number(row[14]) || null, // Ретушер (необязательная)
-        request_status: Number(row[15]) || null, // Статус заявки (необязательная)
-        retouch_link: row[16] || null, // Ссылка на обработанные файлы (необязательная)
-        photos_link: row[17] || null // Ссылка на исходники (необязательная)
-      };
+  // Отладка данных перед отправкой
+  console.log('Отправляемые данные:', fileData);
+
+  try {
+    const response = await axios.post('http://192.168.6.17:8000/api/upload-batch/', { data: fileData }, {
+      headers: getAuthHeaders(), // Добавляем заголовки аутентификации
     });
+    console.log('Ответ сервера:', response.data);
+    alert('Данные успешно внесены!');
+    setShowModal(false);
+    fetchProducts(1); // Сбрасываем на первую страницу после отправки
+  } catch (error) {
+    console.error('Ошибка при внесении данных:', error);
+    alert('Ошибка при внесении данных!');
+  }
+};
 
-    console.log('Отправляемые данные:', validData);
-
-    // Check required fields
-    const invalidRows = validData.filter((row) => !row.barcode || !row.name || !row.category_id || !row.seller || !row.in_stock_sum || !row.cell);
-
-    if (invalidRows.length > 0) {
-      alert('Некоторые строки не содержат обязательных полей. Пожалуйста, заполните их.');
-      return;
-    }
-
-    if (validData.length === 0) {
-      alert('Файл пуст или содержит только заголовки.');
-      return;
-    }
-
-    try {
-      const response = await axios.post('http://192.168.1.15:8000/api/products/bulk-upload/', { data: validData });
-      console.log('Ответ сервера:', response.data);
-      alert('Данные успешно внесены!');
-      setShowModal(false);
-      fetchProducts(1);  // Reset to the first page after submission
-    } catch (error) {
-      console.error('Ошибка при внесении данных:', error);
-      alert('Ошибка при внесении данных!');
-    }
-  };
 
   if (loading) {
     return <div>Загрузка...</div>;

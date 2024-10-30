@@ -63,3 +63,38 @@
     margin-top: 10px;
   }
   
+  /* Подгонка модального окна под печать */
+/* Скрываем сайдбар при печати */
+@media print {
+  /* Скрываем лишние элементы */
+  .sidebar,
+  .modal-actions,
+  .add-barcode {
+    display: none;
+  }
+
+  /* Подгонка контента */
+  .modal-overlay {
+    position: static;
+    width: 100%;
+    height: auto;
+    background: none;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  .header-section,
+  .barcodes-list {
+    text-align: center;
+    margin: 10px 0;
+  }
+
+  .barcode-item {
+    font-size: 14px;
+  }
+}

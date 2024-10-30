@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.1.15:8000/';  // Убедитесь, что это правильный URL
+const API_URL = 'http://192.168.6.17:8000/';  // Убедитесь, что это правильный URL
 
 // Получаем токен из localStorage
 const getAuthHeaders = () => {
@@ -9,25 +9,47 @@ const getAuthHeaders = () => {
 };
 
 // Function to get products with optional search and filter parameters
-const getProducts = async (searchTerm = '', searchBarcode = '', sortField = '', sortOrder = 'asc', page = 1, per_page = 100) => {
+const getProducts = async (
+  searchTerm = '',
+  searchBarcode = '',
+  sortField = '',
+  sortOrder = 'asc',
+  page = 1,
+  per_page = 100,
+  moveStatusIds = [] // Массив ID статусов для фильтрации
+) => {
   try {
     const response = await axios.get(`${API_URL}api/products/`, {
       headers: getAuthHeaders(),
       params: {
-        name: searchTerm,         // Поиск по наименованию продукта
-        barcode: searchBarcode,   // Поиск по штрихкоду
-        sort_field: sortField,    // Поле для сортировки
-        sort_order: sortOrder,    // Порядок сортировки
-        page: page,               // Номер страницы
-        per_page: per_page,       // Количество элементов на странице
+        name: searchTerm,
+        barcode: searchBarcode,
+        sort_field: sortField,
+        sort_order: sortOrder,
+        page: page,
+        per_page: per_page,
+        ...moveStatusIds.length > 0 && { move_status_id__in: moveStatusIds } // Передача массива ID статусов
       },
+      paramsSerializer: params => {
+        return Object.keys(params)
+          .map(key => {
+            if (Array.isArray(params[key])) {
+              return params[key]
+                .map(val => `${encodeURIComponent(key)}=${encodeURIComponent(val)}`)
+                .join('&');
+            }
+            return `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`;
+          })
+          .join('&');
+      }
     });
     return response.data;
   } catch (error) {
     console.error('Error fetching products:', error);
-    throw error;  // Ошибки будут обработаны
+    throw error;
   }
 };
+
 
 // Функция для получения конкретного продукта по штрихкоду
 const getProductByBarcode = async (barcode) => {
@@ -148,20 +170,26 @@ const getLastRequestForBarcode = async (barcode) => {
 
 const updateProductStatusIncome = async (barcodes, userId, status) => {
   try {
-    const response = await axios.post(`${API_URL}api/accept-products/`, {
-      barcodes,
-      userId,
-      status,
-      date: new Date().toISOString()  // Текущая дата
-    }, {
-      headers: getAuthHeaders(),  // Добавляем токен авторизации
-    });
-    return response.data;
+      const response = await axios.post(`${API_URL}api/accept-products/`, {
+          barcodes,
+          userId,
+          status,
+          date: new Date().toISOString()  // Текущая дата
+      }, {
+          headers: getAuthHeaders(),  // Добавляем токен авторизации
+      });
+      
+      if (response.status === 200) {
+          return response.data;
+      } else {
+          throw new Error('Не удалось обновить статус товаров.');
+      }
   } catch (error) {
-    console.error('Ошибка при приемке товаров:', error);
-    throw error;
+      console.error('Ошибка при приемке товаров:', error);
+      throw error;
   }
 };
+
 
 const updateProductStatusOutcome = async (barcodes, userId, status) => {
   try {
@@ -195,6 +223,40 @@ const createRequest = async (barcodes, userId) => {
   }
 };
 
+// В productService.js
+const getProductsWithStatuses = async (statuses, name, barcode, sortField, sortOrder, page) => {
+  const response = await axios.get(`${API_URL}api/products/`, {
+    params: {
+      statuses: statuses.join(','),
+      name,
+      barcode,
+      sortField,
+      sortOrder,
+      page,
+    },
+    headers: getAuthHeaders(),
+  });
+  return response.data;
+};
+
+// Function to fetch product operation history by barcode
+const getProductHistoryByBarcode = async (barcode, page = 1, sortField = 'date', sortOrder = 'desc') => {
+  try {
+    const response = await axios.get(`${API_URL}api/product-history/${barcode}/`, {
+      headers: getAuthHeaders(),
+      params: {
+        page,
+        sort_field: sortField,
+        sort_order: sortOrder,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при получении истории по штрихкоду:', error);
+    throw error;
+  }
+};
+
 
 // Остальные функции...
 
@@ -211,7 +273,9 @@ const productService = {
   createRequest,
   getProductByBarcode,
   logDefectOperation,
-  checkBarcodes
+  checkBarcodes,
+  getProductsWithStatuses,
+  getProductHistoryByBarcode
   // Остальные экспортируемые функции...
 };
 

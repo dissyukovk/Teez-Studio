@@ -15,7 +15,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer
 from django.db import transaction, IntegrityError
-from django.db.models import Count
+from django.db.models import Count, Max
 from django.utils import timezone
 import logging
 
@@ -29,6 +29,11 @@ class ProductPagination(PageNumberPagination):
     max_page_size = 1000
 
 class OrderPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+class ProductHistoryPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
@@ -242,22 +247,29 @@ def user_list(request):
 # Фильтрация для Product
 @api_view(['GET'])
 def product_list(request):
-    products = Product.objects.select_related('category').all()
+    products = Product.objects.select_related('category', 'move_status').all()  # Загружаем `move_status` заранее
 
-    # Фильтрация по полям
+    # Получаем параметры фильтрации
     barcode = request.query_params.get('barcode', None)
     name = request.query_params.get('name', None)
     category = request.query_params.get('category', None)
-    move_status = request.query_params.get('move_status', None)
+    move_status_id = request.query_params.get('move_status_id', None)  # Фильтрация по одному ID статуса
+    move_status_ids = request.query_params.getlist('move_status_id__in')
 
+    # Фильтрация по списку ID статусов
+    if move_status_ids:
+        move_status_ids = [int(status_id) for status_id in move_status_ids]
+        products = products.filter(move_status_id__in=move_status_ids)
+    elif move_status_id:
+        products = products.filter(move_status_id=move_status_id)
+
+    # Применяем остальные фильтры
     if barcode:
         products = products.filter(barcode__icontains=barcode)
     if name:
         products = products.filter(name__icontains=name)
     if category:
         products = products.filter(category__name__icontains=category)
-    if move_status:
-        products = products.filter(move_status__name__icontains=move_status)
 
     # Сортировка
     sort_field = request.query_params.get('sort_field', None)
@@ -268,25 +280,34 @@ def product_list(request):
             sort_field = f'-{sort_field}'
         products = products.order_by(sort_field)
 
+    # Пагинация
     paginator = ProductPagination()
     paginated_products = paginator.paginate_queryset(products, request)
     serializer = ProductSerializer(paginated_products, many=True)
     return paginator.get_paginated_response(serializer.data)
+
 
 # Фильтрация для STRequest
 @api_view(['GET'])
 def strequest_list(request):
     strequests = STRequest.objects.select_related('stockman', 'status').all()  # Предзагрузка stockman и status
     
-    # Фильтрация
+    # Фильтрация по статусу
     status = request.query_params.get('status', None)
     if status:
         strequests = strequests.filter(status__id=status)
 
+    # Фильтрация по фотографу
     photographer_id = request.query_params.get('photographer', None)
     if photographer_id:
         strequests = strequests.filter(photographer_id=photographer_id)
     
+    # Фильтрация по ретушеру
+    retoucher_id = request.query_params.get('retoucher', None)
+    if retoucher_id:
+        strequests = strequests.filter(retoucher_id=retoucher_id)
+    
+    # Дополнительные фильтры
     RequestNumber = request.query_params.get('RequestNumber', None)
     stockman = request.query_params.get('stockman', None)
     barcode = request.query_params.get('barcode', None)
@@ -311,6 +332,7 @@ def strequest_list(request):
     paginated_strequests = paginator.paginate_queryset(strequests, request)
     serializer = STRequestSerializer(paginated_strequests, many=True)
     return paginator.get_paginated_response(serializer.data)
+
 
 # Фильтрация для Invoice с пагинацией и фильтрацией по штрихкоду товара
 @api_view(['GET'])
@@ -372,8 +394,9 @@ class InvoiceListView(ListAPIView):
 
 
 # Bulk Upload Products
+@csrf_exempt
 @api_view(['POST'])
-@transaction.atomic
+@permission_classes([IsAuthenticated])
 def bulk_upload_products(request):
     data = request.data.get('data', [])
 
@@ -447,11 +470,10 @@ def create_request(request):
     
     # Генерируем новый номер заявки
     if last_request:
-        # Преобразуем RequestNumber в целое число и добавляем 1
         last_request_number = int(last_request.RequestNumber)
-        new_request_number = str(last_request_number + 1).zfill(13)  # Форматируем до 13 символов с ведущими нулями
+        new_request_number = str(last_request_number + 1).zfill(13)
     else:
-        new_request_number = "2000000000001"  # Первая заявка, если ничего нет в базе
+        new_request_number = "2000000000001"
 
     # Создаем новую заявку
     new_request = STRequest.objects.create(
@@ -462,8 +484,7 @@ def create_request(request):
     )
 
     # Связываем товары с заявкой
-    for barcode_entry in barcodes:
-        barcode = barcode_entry.get('barcode')  # Предполагаем, что в запросе приходит штрихкод
+    for barcode in barcodes:  # Ожидаем, что `barcodes` содержит список строк
         product = Product.objects.filter(barcode=barcode).first()
         if product:
             STRequestProduct.objects.create(request=new_request, product=product)
@@ -821,7 +842,7 @@ def request_details(request, request_number):
             {
                 'barcode': bp.product.barcode,
                 'name': bp.product.name,
-                'movementStatus': bp.product.move_status.name,
+                'movementStatus': bp.product.move_status.name if bp.product.move_status else 'N/A',  # Проверка на None
                 'category_name': bp.product.category.name if bp.product.category else 'N/A',  # Проверяем наличие категории
                 'category_reference_link': bp.product.category.reference_link if bp.product.category else 'N/A',  # Проверяем наличие ссылки
                 'retouch_status_name': bp.retouch_status.name if bp.retouch_status else 'N/A',  # Статус ретуши из strequestproduct
@@ -856,7 +877,6 @@ def request_details(request, request_number):
         })
     except STRequest.DoesNotExist:
         return Response({'error': 'Request not found'}, status=404)
-
 
 @api_view(['GET'])
 def barcode_details(request, barcode):
@@ -1115,7 +1135,7 @@ def order_details(request, orderNumber):
             {
                 'barcode': order_product.product.barcode,
                 'name': order_product.product.name,
-                'movementStatus': order_product.product.move_status.name,
+                'movementStatus': order_product.product.move_status.name if order_product.product.move_status else 'Не указан',  # Проверка на None
             }
             for order_product in order_products
         ]
@@ -1137,6 +1157,7 @@ def order_details(request, orderNumber):
         return Response(response_data)
     except Order.DoesNotExist:
         return Response({'error': 'Order not found'}, status=404)
+
 
 @api_view(['PATCH'])
 def update_order_status(request, orderNumber):
@@ -1197,7 +1218,7 @@ def check_barcodes(request):
     return Response({'missing_barcodes': missing_barcodes}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])  # Убедитесь, что пользователь авторизован
+@permission_classes([IsAuthenticated])
 def create_order(request):
     try:
         # Получаем штрихкоды из запроса
@@ -1221,10 +1242,14 @@ def create_order(request):
                 'missing_barcodes': missing_barcodes
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Получаем последний номер заказа и увеличиваем на 1
-        last_order = Order.objects.order_by('-OrderNumber').first()
-        new_order_number = int(last_order.OrderNumber) + 1 if last_order else 1
-        
+        # Генерация нового номера заказа с проверкой уникальности
+        last_order = Order.objects.aggregate(Max('OrderNumber'))
+        new_order_number = int(last_order['OrderNumber__max'] or 0) + 1
+
+        # Повторно проверяем на случай коллизий
+        while Order.objects.filter(OrderNumber=new_order_number).exists():
+            new_order_number += 1  # Если такой номер уже есть, увеличиваем на 1
+
         # Получаем текущую дату и время
         current_date = timezone.now()
 
@@ -1251,3 +1276,106 @@ def create_order(request):
         print(f"Error creating order: {e}")
         return Response({'error': 'Ошибка при создании заказа'}, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_products_batch(request):
+    # Получаем данные из тела запроса
+    data = request.data.get('data', [])
+    
+    # Проверка на отсутствие данных
+    if not data:
+        return Response({'error': 'Отсутствуют данные для загрузки'}, status=400)
+
+    missing_data_rows = []  # Список для хранения строк с отсутствующими данными
+
+    # Начинаем транзакцию для обработки данных
+    with transaction.atomic():
+        for index, row in enumerate(data):
+            barcode = row.get('barcode')
+            name = row.get('name')
+            category_id = row.get('category_id')
+            seller = row.get('seller')
+            in_stock_sum = row.get('in_stock_sum')
+            cell = row.get('cell')
+
+            # Проверка на обязательные поля
+            if not barcode or not name or category_id is None or seller is None or in_stock_sum is None:
+                missing_data_rows.append({
+                    'row': index + 1,
+                    'barcode': barcode,
+                    'name': name,
+                    'category_id': category_id,
+                    'seller': seller,
+                    'in_stock_sum': in_stock_sum,
+                    'cell': cell
+                })
+                continue  # Переходим к следующей записи
+
+            try:
+                # Создание или обновление записи
+                Product.objects.update_or_create(
+                    barcode=barcode,
+                    defaults={
+                        'name': name,
+                        'category_id': category_id,
+                        'seller': seller,
+                        'in_stock_sum': in_stock_sum,
+                        'cell': cell
+                    }
+                )
+            except Exception as e:
+                transaction.set_rollback(True)
+                return Response({'error': f'Ошибка при загрузке данных: {str(e)}'}, status=400)
+
+    # Проверка на наличие строк с отсутствующими обязательными данными
+    if missing_data_rows:
+        return Response({
+            'error': 'Отсутствуют обязательные данные в строках.',
+            'missing_data': missing_data_rows
+        }, status=400)
+    
+    # Возвращаем успешный ответ, если все данные загружены корректно
+    return Response({'message': 'Данные успешно загружены'}, status=201)
+
+@api_view(['GET'])
+def get_history_by_barcode(request, barcode):
+    try:
+        history = ProductOperation.objects.filter(product__barcode=barcode).select_related('operation_type', 'user')
+
+        # Получаем параметры сортировки
+        sort_field = request.query_params.get('sort_field', 'date')
+        sort_order = request.query_params.get('sort_order', 'desc')
+
+        # Проверяем, если запрос идет по связанному полю
+        if sort_field == 'operation_type_name':
+            sort_field = 'operation_type__name'
+        elif sort_field == 'user_full_name':
+            sort_field = 'user__first_name'  # Сортировка только по имени пользователя для простоты
+
+        if sort_order == 'desc':
+            sort_field = f'-{sort_field}'
+
+        # Применяем сортировку
+        history = history.order_by(sort_field)
+
+        # Пагинация
+        paginator = ProductHistoryPagination()
+        paginated_history = paginator.paginate_queryset(history, request)
+
+        # Подготовка данных для ответа
+        data = [
+            {
+                "operation_type_name": entry.operation_type.name,
+                "user_full_name": f"{entry.user.first_name} {entry.user.last_name}",
+                "date": entry.date,
+                "comment": entry.comment
+            }
+            for entry in paginated_history
+        ]
+        return paginator.get_paginated_response(data)
+
+    except FieldError as e:
+        return Response({'error': str(e)}, status=400)
+    except ProductOperation.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
