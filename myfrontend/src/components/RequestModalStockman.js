@@ -58,6 +58,15 @@ const RequestModalStockman = ({ isOpen, onClose, requestNumber }) => {
       .catch(error => console.error('Error saving request changes:', error));
   };
 
+  const handleStatusUpdate = async () => {
+    try {
+      await requestService.updateRequestStatus(requestNumber, 2); // Обновляем статус на "Создана"
+      setStatus('Создана'); // Обновляем статус в UI
+    } catch (error) {
+      console.error('Ошибка при обновлении статуса заявки:', error);
+    }
+  };
+
   // Функция печати с инлайн-стилями для страницы печати
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
@@ -135,7 +144,9 @@ const RequestModalStockman = ({ isOpen, onClose, requestNumber }) => {
       <div className="modal-overlay">
         <div className="modal-content" ref={modalContentRef}>
           <h2>Заявка №{requestNumber}</h2>
-          <p>Статус: {status}</p>
+          <p>Статус: {status}
+          <button onClick={handleStatusUpdate} className="status-update-btn">Создать</button>
+          </p>
 
           <div className="barcodes-list">
             <h3>Товары:</h3>
