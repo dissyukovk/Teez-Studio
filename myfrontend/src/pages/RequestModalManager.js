@@ -46,6 +46,7 @@ const RequestModalManager = ({ isOpen, onClose, requestNumber }) => {
                 <tr>
                   <th>Штрихкод</th>
                   <th>Наименование</th>
+                  <th>Статус ретуши</th>
                   <th>Ссылка на обработанные фото</th>
                 </tr>
               </thead>
@@ -54,12 +55,13 @@ const RequestModalManager = ({ isOpen, onClose, requestNumber }) => {
                   <tr key={barcode.barcode}>
                     <td>{barcode.barcode}</td>
                     <td>{barcode.name}</td>
+                    <td>{barcode.retouch_status_name || 'Не указан'}</td> {/* Добавляем статус ретуши */}
                     <td>
                       {barcode.retouch_link && barcode.retouch_link !== 'N/A' ? (
                         <a href={barcode.retouch_link} target="_blank" rel="noopener noreferrer">
                           <button className="reference-btn">Обработанные фото</button>
                         </a>
-                      ) : null}
+                      ) : 'Нет данных'}
                     </td>
                   </tr>
                 ))}

@@ -1,7 +1,7 @@
 const authService = {
   async login(username, password) {
     try {
-      const response = await fetch('http://192.168.7.56:8000/api/token/', {
+      const response = await fetch('http://192.168.6.17:8000/api/token/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,7 +52,7 @@ async getUserData() {
   }
 
   try {
-    const response = await fetch('http://192.168.7.56:8000/api/user/', {
+    const response = await fetch('http://192.168.6.17:8000/api/user/', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -94,7 +94,7 @@ async refreshToken() {
   }
 
   try {
-    const response = await fetch('http://192.168.7.56:8000/api/token/refresh/', {
+    const response = await fetch('http://192.168.6.17:8000/api/token/refresh/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
