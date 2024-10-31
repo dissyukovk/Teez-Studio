@@ -19,7 +19,9 @@ import InvoiceView from './pages/InvoiceView'
 import CreateOrder from './components/CreateOrder';
 import PrintBarcode from './components/PrintBarcode';
 import CurrentProductsFS from './components/CurrentProductsFS';
-import BarcodeHistory from './components/BarcodeHistory'; 
+import BarcodeHistory from './components/BarcodeHistory';
+import ManagerRequests from './components/ManagerRequests';
+
 
 // Import components for Senior Photographer
 import PhDistributeRequests from './pages/PhDistributeRequests';
@@ -140,6 +142,10 @@ const App = () => {
           <Route
             path="/barcode-history"
             element={isAuthenticated ? <BarcodeHistory /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/requests/manager"
+            element={isAuthenticated ? <ManagerRequests /> : <Navigate to="/login" />}
           />
         </Routes>
       </div>

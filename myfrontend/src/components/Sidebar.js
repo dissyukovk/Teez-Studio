@@ -114,10 +114,13 @@ function Sidebar({ user }) {
               </>
               
             )}
-
-
+            {/* Менеджер Section */}
+              {user.groups.includes('Менеджер') && (
+                <li>
+                  <NavLink to="/requests/manager" activeClassName="active">Заявки (менеджер)</NavLink>
+                </li>
+              )}
       </ul>
-
       {/* User Info at the bottom */}
       <div className="user-info" onClick={() => setShowLogout(!showLogout)}>
         <div className="user-name">
