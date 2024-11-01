@@ -247,23 +247,24 @@ def user_list(request):
 # Фильтрация для Product
 @api_view(['GET'])
 def product_list(request):
-    products = Product.objects.select_related('category', 'move_status').all()  # Загружаем `move_status` заранее
+    products = Product.objects.select_related('category', 'move_status').all()
 
-    # Получаем параметры фильтрации
+    # Get filtering parameters
     barcode = request.query_params.get('barcode', None)
     name = request.query_params.get('name', None)
     category = request.query_params.get('category', None)
-    move_status_id = request.query_params.get('move_status_id', None)  # Фильтрация по одному ID статуса
+    move_status_id = request.query_params.get('move_status_id', None)
     move_status_ids = request.query_params.getlist('move_status_id__in')
 
-    # Фильтрация по списку ID статусов
+    # Filter out empty strings from move_status_ids
+    move_status_ids = [int(status_id) for status_id in move_status_ids if status_id]
+
+    # Apply filters
     if move_status_ids:
-        move_status_ids = [int(status_id) for status_id in move_status_ids]
         products = products.filter(move_status_id__in=move_status_ids)
     elif move_status_id:
         products = products.filter(move_status_id=move_status_id)
 
-    # Применяем остальные фильтры
     if barcode:
         products = products.filter(barcode__icontains=barcode)
     if name:
@@ -271,7 +272,7 @@ def product_list(request):
     if category:
         products = products.filter(category__name__icontains=category)
 
-    # Сортировка
+    # Sorting
     sort_field = request.query_params.get('sort_field', None)
     sort_order = request.query_params.get('sort_order', 'asc')
 
@@ -280,7 +281,7 @@ def product_list(request):
             sort_field = f'-{sort_field}'
         products = products.order_by(sort_field)
 
-    # Пагинация
+    # Pagination
     paginator = ProductPagination()
     paginated_products = paginator.paginate_queryset(products, request)
     serializer = ProductSerializer(paginated_products, many=True)
@@ -1379,3 +1380,27 @@ def get_history_by_barcode(request, barcode):
         return Response({'error': str(e)}, status=400)
     except ProductOperation.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+
+# View for Move Statuses
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def move_statuses(request):
+    try:
+        statuses = ProductMoveStatus.objects.all()
+        serializer = StatusSerializer(statuses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# View for Stockmen Users
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def stockman_list(request):
+    stockman_group = Group.objects.filter(name="Товаровед").first()
+    if not stockman_group:
+        return Response({"error": "Group 'Товаровед' not found"}, status=404)
+
+    stockmen = User.objects.filter(groups=stockman_group)
+    stockmen_data = [{"id": stockman.id, "name": f"{stockman.first_name} {stockman.last_name}"} for stockman in stockmen]
+
+    return Response(stockmen_data)

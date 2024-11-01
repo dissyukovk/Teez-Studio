@@ -1,11 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import productService from '../services/productService';
 import './ProductTable.css';
-import ModalIncomeComponent from './ModalIncomeComponent';
-import ModalOutcomeComponent from './ModalOutcomeComponent';
-import ProductModalStockman from './ProductModalStockman';
 
-const ProductTable = () => {
+const ProductListManager = () => {
   const [products, setProducts] = useState([]);
   const [moveStatuses, setMoveStatuses] = useState([]);
   const [stockmen, setStockmen] = useState([]);
@@ -19,10 +16,6 @@ const ProductTable = () => {
   const [searchName, setSearchName] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [showModalIncome, setShowModalIncome] = useState(false);
-  const [showModalOutcome, setShowModalOutcome] = useState(false);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [selectedBarcode, setSelectedBarcode] = useState(null);
 
   const fetchProducts = useCallback(async (page = 1) => {
     setLoading(true);
@@ -66,25 +59,9 @@ const ProductTable = () => {
     fetchProducts(page);
   };
 
-  const openModalIncome = () => setShowModalIncome(true);
-  const closeModalIncome = () => setShowModalIncome(false);
-
-  const openModalOutcome = () => setShowModalOutcome(true);
-  const closeModalOutcome = () => setShowModalOutcome(false);
-
-  const openProductModal = (barcode) => {
-    setSelectedBarcode(barcode);
-    setShowProductModal(true);
-  };
-  const closeProductModal = () => setShowProductModal(false);
-
   return (
     <div className="main-content">
-      <h1>Список товаров</h1>
-      <div className="action-buttons">
-        <button onClick={openModalIncome} className="primary-button">Начать приемку</button>
-        <button onClick={openModalOutcome} className="secondary-button">Начать отправку</button>
-      </div>
+      <h1>Список товаров (менеджер)</h1>
 
       <div className="search-container">
         <input
@@ -144,9 +121,7 @@ const ProductTable = () => {
             {products.length > 0 ? (
               products.map(product => (
                 <tr key={product.barcode}>
-                  <td onClick={() => openProductModal(product.barcode)} style={{ cursor: 'pointer', color: 'blue' }}>
-                    {product.barcode}
-                  </td>
+                  <td>{product.barcode}</td>
                   <td>{product.name}</td>
                   <td>{product.cell}</td>
                   <td>{product.category_name}</td>
@@ -172,15 +147,8 @@ const ProductTable = () => {
         <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Следующая</button>
         <button onClick={() => handlePageChange(totalPages)} disabled={currentPage === totalPages}>Последняя</button>
       </div>
-
-      {/* Modals */}
-      {showModalIncome && <ModalIncomeComponent closeModal={closeModalIncome} />}
-      {showModalOutcome && <ModalOutcomeComponent closeModal={closeModalOutcome} />}
-      {showProductModal && selectedBarcode && (
-        <ProductModalStockman barcode={selectedBarcode} closeModal={closeProductModal} />
-      )}
     </div>
   );
 };
 
-export default ProductTable;
+export default ProductListManager;

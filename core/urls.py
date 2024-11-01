@@ -53,7 +53,9 @@ from .views import (
     check_barcodes,
     create_order,
     upload_products_batch,
-    get_history_by_barcode
+    get_history_by_barcode,
+    move_statuses,
+    stockman_list
 )
 
 class UserDetailView(APIView):
@@ -116,6 +118,8 @@ urlpatterns = [
     path('api/requests/<str:request_number>/assign-retoucher/', assign_retoucher, name='assign_retoucher'),
     path('api/orders/search-by-barcode/', search_orders_by_barcode, name='search_orders_by_barcode'),
     path('orders/<str:orderNumber>/details/', order_details, name='order_details'),
+    path('api/move-statuses/', move_statuses, name='move_statuses'),
+    path('api/stockman/', stockman_list, name='stockman_list'),
     
     # Путь для получения деталей заявки
     path('requests/<int:request_number>/details/', request_details, name='request_details'),

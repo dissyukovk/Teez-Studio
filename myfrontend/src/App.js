@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import ProductTable from './components/ProductTable'; // Replace StockmanProducts with ProductTable
+import ProductListManager from './components/ProductListManager';
 import Requests from './components/Requests';
 import Invoices from './components/Invoices';
 import AdminProducts from './components/AdminProducts'; // Import the new admin products page
@@ -102,6 +103,7 @@ const App = () => {
             path="/requests/distribute"
             element={isAuthenticated ? <PhDistributeRequests /> : <Navigate to="/login" />}
           />
+          <Route path="/products-manager" element={isAuthenticated ? <ProductListManager /> : <Navigate to="/login" />} />
           <Route
             path="/requests/check"
             element={isAuthenticated ? <PhCheckRequests /> : <Navigate to="/login" />}

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.6.17:8000/';  // Убедитесь, что это правильный URL
+const API_URL = 'http://192.168.7.56:8000/';  // Убедитесь, что это правильный URL
 
 // Получаем токен из localStorage
 const getAuthHeaders = () => {
@@ -9,6 +9,7 @@ const getAuthHeaders = () => {
 };
 
 // Function to get products with optional search and filter parameters
+// Function to get products with optional search and filter parameters
 const getProducts = async (
   searchTerm = '',
   searchBarcode = '',
@@ -16,9 +17,12 @@ const getProducts = async (
   sortOrder = 'asc',
   page = 1,
   per_page = 100,
-  moveStatusIds = [] // Массив ID статусов для фильтрации
+  moveStatusIds = [] // Array of status IDs for filtering
 ) => {
   try {
+    // Filter out any invalid entries from moveStatusIds (like empty strings)
+    const validMoveStatusIds = moveStatusIds.filter(id => id);
+
     const response = await axios.get(`${API_URL}api/products/`, {
       headers: getAuthHeaders(),
       params: {
@@ -28,7 +32,7 @@ const getProducts = async (
         sort_order: sortOrder,
         page: page,
         per_page: per_page,
-        ...moveStatusIds.length > 0 && { move_status_id__in: moveStatusIds } // Передача массива ID статусов
+        ...(moveStatusIds.length > 0 && { move_status_id__in: moveStatusIds })
       },
       paramsSerializer: params => {
         return Object.keys(params)
@@ -49,7 +53,6 @@ const getProducts = async (
     throw error;
   }
 };
-
 
 // Функция для получения конкретного продукта по штрихкоду
 const getProductByBarcode = async (barcode) => {
@@ -257,6 +260,51 @@ const getProductHistoryByBarcode = async (barcode, page = 1, sortField = 'date',
   }
 };
 
+// Функция для получения статусов товародвижения
+const getMoveStatuses = async () => {
+  try {
+    const response = await axios.get(`${API_URL}api/move-statuses/`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data; // Вернем список статусов движения товаров
+  } catch (error) {
+    console.error('Ошибка при получении статусов движения:', error);
+    throw error;
+  }
+};
+
+// Функция для получения списка товароведов
+const getStockman = async () => {
+  try {
+    const response = await axios.get(`${API_URL}api/stockman/`, { headers: getAuthHeaders() });
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при загрузке товароведов:', error);
+    throw error;
+  }
+};
+
+// Функция для получения списка фотографов
+const getPhotographers = async () => {
+  try {
+    const response = await axios.get(`${API_URL}api/photographers/`, { headers: getAuthHeaders() });
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при загрузке фотографов:', error);
+    throw error;
+  }
+};
+
+// Функция для получения списка ретушеров
+const getRetouchers = async () => {
+  try {
+    const response = await axios.get(`${API_URL}api/retouchers/`, { headers: getAuthHeaders() });
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при загрузке ретушеров:', error);
+    throw error;
+  }
+};
 
 // Остальные функции...
 
@@ -275,7 +323,11 @@ const productService = {
   logDefectOperation,
   checkBarcodes,
   getProductsWithStatuses,
-  getProductHistoryByBarcode
+  getProductHistoryByBarcode,
+  getMoveStatuses,
+  getStockman,
+  getPhotographers,
+  getRetouchers
   // Остальные экспортируемые функции...
 };
 

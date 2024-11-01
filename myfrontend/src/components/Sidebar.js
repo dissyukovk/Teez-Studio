@@ -116,9 +116,12 @@ function Sidebar({ user }) {
             )}
             {/* Менеджер Section */}
               {user.groups.includes('Менеджер') && (
+                <>
                 <li>
                   <NavLink to="/requests/manager" activeClassName="active">Заявки (менеджер)</NavLink>
                 </li>
+                <li><NavLink to="/products-manager" activeClassName="active">Список товаров (менеджер)</NavLink></li>
+                </>
               )}
       </ul>
       {/* User Info at the bottom */}
