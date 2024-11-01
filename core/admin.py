@@ -10,7 +10,10 @@ class STRequestStatusAdmin(admin.ModelAdmin):
 # Admin for STRequest
 @admin.register(STRequest)
 class STRequestAdmin(admin.ModelAdmin):
-    list_display = ['RequestNumber', 'photographer', 'retoucher', 'stockman', 'creation_date', 'status']
+    list_display = [
+        'RequestNumber', 'photographer', 'retoucher', 'stockman',
+        'creation_date', 'status', 'photo_date', 'retouch_date'
+    ]
     search_fields = ['RequestNumber', 'status__name']
     list_filter = ['status', 'creation_date']
     ordering = ['creation_date']

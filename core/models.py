@@ -19,6 +19,8 @@ class STRequest(models.Model):
     s_ph_comment = models.TextField(blank=True, null=True)
     sr_comment = models.TextField(blank=True, null=True)
     photos_link = models.TextField(blank=True, null=True)
+    photo_date = models.DateTimeField(blank=True, null=True)
+    retouch_date = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         return self.RequestNumber

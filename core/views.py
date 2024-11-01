@@ -994,6 +994,7 @@ def assign_photographer(request, request_number):
         st_request.photographer = photographer
         st_request.s_ph_comment = comment  # Сохраняем комментарий
         st_request.status_id = 3  # Обновляем статус заявки
+        st_request.photo_date = timezone.now()  # Устанавливаем текущую дату и время в photo_date
         st_request.save()
 
         # Логируем операцию в таблицу ProductOperation
@@ -1038,9 +1039,11 @@ def assign_retoucher(request, request_number):
         if not retoucher:
             return Response({'error': 'Ретушер не найден'}, status=404)
 
+        # Назначаем ретушера и обновляем статус
         st_request.retoucher = retoucher
         st_request.status_id = 6  # Устанавливаем статус на "Ретушь"
-        
+        st_request.retouch_date = timezone.now()  # Устанавливаем текущую дату и время в retouch_date
+
         # Записываем комментарий, если он был передан
         if comment:
             st_request.sr_comment = comment

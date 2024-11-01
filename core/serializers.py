@@ -114,7 +114,9 @@ class STRequestSerializer(serializers.ModelSerializer):
             'retoucher_last_name',
             'stockman',
             'sr_comment',
-            's_ph_comment'
+            's_ph_comment',
+            'photo_date',
+            'retouch_date'
         ]
 
     def get_total_products(self, obj):
