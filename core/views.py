@@ -624,9 +624,13 @@ def create_invoice(request):
     creator = request.user  # Получаем текущего пользователя
     date = request.data.get('date', timezone.now())
 
-    # Создаем новую накладную
+    # Получаем максимальный номер накладной и увеличиваем его на 1
+    max_invoice_number = Invoice.objects.aggregate(Max('InvoiceNumber'))['InvoiceNumber__max']
+    new_invoice_number = str(int(max_invoice_number) + 1).zfill(13) if max_invoice_number else '0000000000001'
+
+    # Создаем новую накладную с уникальным номером
     new_invoice = Invoice.objects.create(
-        InvoiceNumber=str(Invoice.objects.count() + 1).zfill(13),  # Генерируем новый номер накладной
+        InvoiceNumber=new_invoice_number,
         date=date,
         creator=creator
     )
