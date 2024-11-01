@@ -48,7 +48,7 @@ class Product(models.Model):
     category = models.ForeignKey(ProductCategory, on_delete=models.SET_NULL, null=True)
     in_stock_sum = models.IntegerField()
     seller = models.IntegerField(null=True, blank=True)
-    move_status = models.ForeignKey(ProductMoveStatus, on_delete=models.SET_NULL, null=True)
+    move_status = models.ForeignKey(ProductMoveStatus, on_delete=models.SET_NULL, null=True, default=7)
     retouch_link = models.TextField(blank=True, null=True)
     income_date = models.DateTimeField(null=True, blank=True)  # Дата приемки
     outcome_date = models.DateTimeField(null=True, blank=True)  # Дата отправки
