@@ -22,6 +22,7 @@ import PrintBarcode from './components/PrintBarcode';
 import CurrentProductsFS from './components/CurrentProductsFS';
 import BarcodeHistory from './components/BarcodeHistory';
 import ManagerRequests from './components/ManagerRequests';
+import CategoryTable from './components/CategoryTable';
 
 
 // Import components for Senior Photographer
@@ -149,6 +150,7 @@ const App = () => {
             path="/requests/manager"
             element={isAuthenticated ? <ManagerRequests /> : <Navigate to="/login" />}
           />
+          <Route path="/categories" element={<CategoryTable />} />
         </Routes>
       </div>
     </Router>

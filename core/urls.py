@@ -57,7 +57,9 @@ from .views import (
     move_statuses,
     stockman_list,
     ProductCategoryViewSet,
-    upload_categories
+    upload_categories,
+    CategoryListView,
+    categories_list
 )
 
 class UserDetailView(APIView):
@@ -80,7 +82,6 @@ router.register(r'strequests', STRequestViewSet, basename='strequest')
 router.register(r'invoices', InvoiceViewSet, basename='invoice')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'operations/crud', ProductOperationCRUDViewSet)
-router.register(r'categories', ProductCategoryViewSet, basename='category')
 
 urlpatterns = [
     # CRUD операции
@@ -102,7 +103,7 @@ urlpatterns = [
     path('api/orders/create/', create_order, name='create_order'),
     path('api/upload-batch/', upload_products_batch, name='upload-products-batch'),
     path('api/product-history/<str:barcode>/', get_history_by_barcode, name='history_by_barcode'),
-    path('upload-categories/', upload_categories, name='upload-categories'),
+    path('api/upload-categories/', upload_categories, name='upload-categories'),
 
 
     # Основные API
@@ -125,7 +126,8 @@ urlpatterns = [
     path('orders/<str:orderNumber>/details/', order_details, name='order_details'),
     path('api/move-statuses/', move_statuses, name='move_statuses'),
     path('api/stockman/', stockman_list, name='stockman_list'),
-    
+    path('api/categories/', categories_list, name='categories_list'),
+       
     # Путь для получения деталей заявки
     path('requests/<int:request_number>/details/', request_details, name='request_details'),
 

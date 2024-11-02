@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.7.56:8000/';
+const API_URL = 'http://192.168.6.44:8000/';
 
 const getInvoices = async (invoiceNumber = '', barcode = '', sortField = '', sortOrder = 'asc', page = 1, per_page = 100) => {
   try {

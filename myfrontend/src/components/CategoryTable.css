@@ -1,0 +1,53 @@
+.main-content {
+    padding: 20px;
+  }
+  
+  .upload-container {
+    margin-bottom: 20px;
+  }
+  
+  .upload-container input[type="file"] {
+    margin-right: 10px;
+  }
+  
+  .reference-button {
+    background-color: #007bff;
+    color: #fff;
+    padding: 5px 10px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+  
+  .reference-button:hover {
+    background-color: #0056b3;
+  }
+  
+  .category-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  .category-table th,
+  .category-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  
+  .category-table th {
+    background-color: #f2f2f2;
+  }
+  
+  .search-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .search-container input {
+    padding: 8px;
+    width: 200px;
+  }
+  

@@ -54,6 +54,9 @@ function Sidebar({ user }) {
               <li>
                 <NavLink to="/create-order" activeClassName="active">Создание заказов (суперадмин)</NavLink>
               </li>
+              <li>
+                <NavLink to="/categories" activeClassName="active">Категории</NavLink>
+              </li>
             </>
           )}
         {/* Старший фотограф Section */}

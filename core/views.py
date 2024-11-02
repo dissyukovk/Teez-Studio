@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import STRequest, Product, Invoice, ProductMoveStatus, ProductCategory, Product, Order, OrderProduct, OrderStatus, STRequestProduct, ProductOperation, ProductOperationTypes, InvoiceProduct, RetouchStatus, STRequestStatus
 from .forms import STRequestForm
 from django.contrib.auth.decorators import login_required
-from rest_framework import viewsets, status, serializers, generics
+from rest_framework import viewsets, status, serializers, generics, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,6 +18,8 @@ from django.db import transaction, IntegrityError
 from django.db.models import Count, Max
 from django.utils import timezone
 import logging
+from django_filters import rest_framework as filters
+
 
 # Настраиваем логирование
 logger = logging.getLogger(__name__)
@@ -37,6 +39,13 @@ class ProductHistoryPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
+
+class CategoryPagination(PageNumberPagination):
+    page_size = 10  # Default page size
+    page_size_query_param = 'page_size'
+    max_page_size = 50  # Max page size for user
+
+
 
 # CRUD для пользователей (User) с фильтрацией и сортировкой
 class UserViewSet(viewsets.ModelViewSet):
@@ -1420,27 +1429,105 @@ class ProductCategoryViewSet(viewsets.ReadOnlyModelViewSet):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_categories(request):
-    file = request.FILES.get('file')
-    if not file:
-        return Response({'error': 'Файл не найден'}, status=status.HTTP_400_BAD_REQUEST)
-
+    categories_data = request.data.get('categories', [])
+    
+    if not categories_data:
+        return Response({'error': 'Нет данных для загрузки'}, status=status.HTTP_400_BAD_REQUEST)
+    
     try:
-        # Read the Excel file, assuming it has headers
-        df = pd.read_excel(file, header=0)
-        
-        # Process each row, starting from the second row
-        for index, row in df.iterrows():
-            try:
-                ProductCategory.objects.update_or_create(
-                    id=row['ID'],
-                    defaults={
-                        'name': row['Имя'],
-                        'reference_link': row['Ссылка']
-                    }
-                )
-            except IntegrityError:
-                return Response({'error': f'Ошибка сохранения категории с ID {row["ID"]}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Обработка каждой категории
+        for category_data in categories_data:
+            category_id = category_data.get('id')
+            name = category_data.get('name')
+            reference_link = category_data.get('reference_link')
+
+            # Создание или обновление категории
+            ProductCategory.objects.update_or_create(
+                id=category_id,
+                defaults={
+                    'name': name,
+                    'reference_link': reference_link,
+                }
+            )
 
         return Response({'message': 'Категории успешно загружены'}, status=status.HTTP_201_CREATED)
+    except IntegrityError as e:
+        return Response({'error': f'Ошибка сохранения категории: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+class CategoryListView(generics.ListAPIView):
+    serializer_class = ProductCategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = CategoryPagination
+
+    def get_queryset(self):
+        queryset = ProductCategory.objects.all()
+        
+        # Filtering
+        name = self.request.query_params.get('name', None)
+        reference_link = self.request.query_params.get('reference_link', None)
+        
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+        if reference_link:
+            queryset = queryset.filter(reference_link__icontains=reference_link)
+
+        # Sorting
+        ordering = self.request.query_params.get('ordering', 'id')  # Default to sorting by ID
+        if ordering:
+            # Allows descending ordering with '-' prefix
+            queryset = queryset.order_by(ordering)
+        
+        return queryset
+
+class ProductCategoryFilter(filters.FilterSet):
+    name = filters.CharFilter(lookup_expr='icontains')  # Case-insensitive contains
+    reference_link = filters.CharFilter(lookup_expr='icontains')  # Similar filter for links
+
+    # Specify ordering filter
+    ordering = filters.OrderingFilter(
+        fields=(
+            ('id', 'id'),
+            ('name', 'name'),
+            ('reference_link', 'reference_link'),
+        )
+    )
+
+    class Meta:
+        model = ProductCategory
+        fields = ['name', 'reference_link']  # Fields that can be filtered
+
+
+@api_view(['GET'])
+def categories_list(request):
+    categories = ProductCategory.objects.all()
+
+    # Filtering
+    category_id = request.query_params.get('id', None)
+    name = request.query_params.get('name', None)
+    reference_link = request.query_params.get('reference_link', None)
+
+    if category_id:
+        categories = categories.filter(id=category_id)
+    if name:
+        categories = categories.filter(name__icontains=name)
+    if reference_link:
+        categories = categories.filter(reference_link__icontains=reference_link)
+
+    # Sorting
+    sort_field = request.query_params.get('sort_field', 'id')
+    sort_order = request.query_params.get('sort_order', 'asc')
+
+    if sort_field:
+        if sort_order == 'desc':
+            sort_field = f'-{sort_field}'
+        categories = categories.order_by(sort_field)
+
+    # Pagination
+    paginator = ProductPagination()
+    paginated_categories = paginator.paginate_queryset(categories, request)
+
+    # Serialization
+    serializer = ProductCategorySerializer(paginated_categories, many=True)
+    return paginator.get_paginated_response(serializer.data)
