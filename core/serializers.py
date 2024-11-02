@@ -177,3 +177,7 @@ class RetouchStatusSerializer(serializers.ModelSerializer):
         model = RetouchStatus
         fields = ['id', 'name']
 
+class ProductCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductCategory
+        fields = ['id', 'name', 'reference_link']

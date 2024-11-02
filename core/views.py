@@ -13,7 +13,7 @@ from django.contrib.auth.models import User, Group
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer
+from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer
 from django.db import transaction, IntegrityError
 from django.db.models import Count, Max
 from django.utils import timezone
@@ -1411,3 +1411,36 @@ def stockman_list(request):
     stockmen_data = [{"id": stockman.id, "name": f"{stockman.first_name} {stockman.last_name}"} for stockman in stockmen]
 
     return Response(stockmen_data)
+
+class ProductCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ProductCategory.objects.all()
+    serializer_class = ProductCategorySerializer
+    permission_classes = [IsAuthenticated]
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_categories(request):
+    file = request.FILES.get('file')
+    if not file:
+        return Response({'error': 'Файл не найден'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Read the Excel file, assuming it has headers
+        df = pd.read_excel(file, header=0)
+        
+        # Process each row, starting from the second row
+        for index, row in df.iterrows():
+            try:
+                ProductCategory.objects.update_or_create(
+                    id=row['ID'],
+                    defaults={
+                        'name': row['Имя'],
+                        'reference_link': row['Ссылка']
+                    }
+                )
+            except IntegrityError:
+                return Response({'error': f'Ошибка сохранения категории с ID {row["ID"]}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'message': 'Категории успешно загружены'}, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

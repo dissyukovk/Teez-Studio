@@ -55,7 +55,9 @@ from .views import (
     upload_products_batch,
     get_history_by_barcode,
     move_statuses,
-    stockman_list
+    stockman_list,
+    ProductCategoryViewSet,
+    upload_categories
 )
 
 class UserDetailView(APIView):
@@ -78,6 +80,7 @@ router.register(r'strequests', STRequestViewSet, basename='strequest')
 router.register(r'invoices', InvoiceViewSet, basename='invoice')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'operations/crud', ProductOperationCRUDViewSet)
+router.register(r'categories', ProductCategoryViewSet, basename='category')
 
 urlpatterns = [
     # CRUD операции
@@ -99,6 +102,8 @@ urlpatterns = [
     path('api/orders/create/', create_order, name='create_order'),
     path('api/upload-batch/', upload_products_batch, name='upload-products-batch'),
     path('api/product-history/<str:barcode>/', get_history_by_barcode, name='history_by_barcode'),
+    path('upload-categories/', upload_categories, name='upload-categories'),
+
 
     # Основные API
     path('api/products/', product_list, name='product-list'),
