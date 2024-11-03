@@ -15,11 +15,12 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer
 from django.db import transaction, IntegrityError
-from django.db.models import Count, Max, F, Value, Q
+from django.db.models import Count, Max, F, Value, Q, Sum
 from django.db.models.functions import Concat
 from django.utils import timezone
 import logging
 from django_filters import rest_framework as filters
+from datetime import datetime
 
 
 # Настраиваем логирование
@@ -1604,21 +1605,115 @@ class PhotographerStatsView(APIView):
         if not selected_date:
             return Response({"error": "Date parameter is required"}, status=400)
 
+        # Преобразуем дату в формат datetime, если требуется
+        try:
+            selected_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({"error": "Invalid date format. Use YYYY-MM-DD"}, status=400)
+
         # Получаем список фотографов и вычисляем статистику
         stats = (
             User.objects
             .filter(groups__name="Фотограф")
             .annotate(
+                # Подсчет уникальных заявок
                 requests_count=Count(
                     'photographer_requests',
-                    filter=Q(photographer_requests__status_id__in=[5, 6, 7, 8, 9], photographer_requests__photo_date__date=selected_date),
+                    filter=Q(
+                        photographer_requests__status_id__in=[5, 6, 7, 8, 9], 
+                        photographer_requests__photo_date__date=selected_date
+                    ),
+                    distinct=True
                 ),
+                # Подсчет товаров, связанных с этими заявками
                 total_products=Count(
                     'photographer_requests__strequestproduct',
-                    filter=Q(photographer_requests__status_id__in=[5, 6, 7, 8, 9], photographer_requests__photo_date__date=selected_date),
+                    filter=Q(
+                        photographer_requests__status_id__in=[5, 6, 7, 8, 9], 
+                        photographer_requests__photo_date__date=selected_date
+                    )
                 )
             )
             .values('id', 'first_name', 'last_name', 'requests_count', 'total_products')
         )
 
         return Response(stats)
+
+class RetoucherStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        selected_date = request.query_params.get('date')
+        
+        if not selected_date:
+            return Response({"error": "Date parameter is required"}, status=400)
+
+        # Get retouchers and calculate stats
+        stats = (
+            User.objects
+            .filter(groups__name="Ретушер")
+            .annotate(
+                # Count distinct requests
+                requests_count=Count(
+                    'retoucher_requests',
+                    filter=Q(retoucher_requests__status_id__in=[8, 9], retoucher_requests__retouch_date__date=selected_date),
+                    distinct=True
+                ),
+                # Count distinct products in the requests
+                total_products=Count(
+                    'retoucher_requests__strequestproduct__id',
+                    filter=Q(retoucher_requests__status_id__in=[8, 9], retoucher_requests__retouch_date__date=selected_date),
+                    distinct=True
+                )
+            )
+            .values('id', 'first_name', 'last_name', 'requests_count', 'total_products')
+        )
+
+        return Response(stats)
+
+class ManagerProductStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        selected_date = request.query_params.get('date')
+
+        if not selected_date:
+            return Response({"error": "Date parameter is required"}, status=400)
+
+        # Total ordered items count for the selected date
+        ordered_count = Order.objects.filter(date__date=selected_date).aggregate(ordered=Count('orderproduct'))
+
+        # Aggregate accepted, shipped, and defective operations by user
+        accepted = ProductOperation.objects.filter(
+            operation_type=3,  # Accepted
+            date__date=selected_date
+        ).values('user_id').annotate(total=Count('id'))
+
+        shipped = ProductOperation.objects.filter(
+            operation_type=4,  # Shipped
+            date__date=selected_date
+        ).values('user_id').annotate(total=Count('id'))
+
+        defective_count = ProductOperation.objects.filter(
+            operation_type=25,  # Defective
+            date__date=selected_date
+        ).count()
+
+        # Construct response data
+        stats = {
+            "ordered": ordered_count['ordered'],
+            "accepted": list(accepted),
+            "shipped": list(shipped),
+            "defective": defective_count
+        }
+
+        return Response(stats)
+
+class StockmanListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        stockman_group = Group.objects.get(name="Товаровед")
+        stockmen = stockman_group.user_set.all().values('id', 'first_name', 'last_name')
+        
+        return Response(stockmen)

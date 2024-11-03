@@ -25,6 +25,8 @@ import ManagerRequests from './components/ManagerRequests';
 import CategoryTable from './components/CategoryTable';
 import DefectOperations from './components/DefectOperations';
 import PhotographerStats from './components/PhotographerStats';
+import RetoucherStats from './components/RetoucherStats';
+import ManagerProductStats from './components/ManagerProductStats';
 
 // Import components for Senior Photographer
 import PhDistributeRequests from './pages/PhDistributeRequests';
@@ -154,6 +156,11 @@ const App = () => {
           <Route path="/categories" element={<CategoryTable />} />
           <Route path="/defect" element={<DefectOperations />} />
           <Route path="/photographer-stats" element={<PhotographerStats />} />
+          <Route
+            path="/retoucher-stats"
+            element={isAuthenticated ? <RetoucherStats /> : <Navigate to="/login" />}
+          />
+          <Route path="/manager-product-stats" element={<ManagerProductStats />} />
         </Routes>
       </div>
     </Router>

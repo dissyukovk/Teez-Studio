@@ -89,6 +89,10 @@ function Sidebar({ user }) {
             <li>
               <NavLink to="/sr/requests/inretouch" activeClassName="active">В ретуши</NavLink>
             </li>
+            <li><NavLink to="/retoucher-stats" activeClassName="active">
+              Статистика ретушеров
+              </NavLink>
+              </li>
           </>
         )}
 
@@ -127,6 +131,14 @@ function Sidebar({ user }) {
                   <NavLink to="/requests/manager" activeClassName="active">Заявки (менеджер)</NavLink>
                 </li>
                 <li><NavLink to="/products-manager" activeClassName="active">Список товаров (менеджер)</NavLink></li>
+                <li><NavLink to="/manager-product-stats" activeClassName="active">Статистика товароведов (менеджер)</NavLink></li>
+                <li>
+                  <NavLink to="/photographer-stats">Статистика фотографов</NavLink> {/* Новая ссылка */}
+                </li>
+                <li><NavLink to="/retoucher-stats" activeClassName="active">
+                  Статистика ретушеров
+                  </NavLink>
+                  </li>
                 </>
               )}
       </ul>

@@ -246,6 +246,19 @@ const getPhotographerStats = async (date) => {
   }
 };
 
+const getRetoucherStats = async (date) => {
+  try {
+    const response = await axios.get(`${API_URL}api/retoucher-stats/`, {
+      params: { date },
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching retoucher stats:', error);
+    throw error;
+  }
+};
+
 const requestService = {
   getRequests,
   createRequest,
@@ -262,7 +275,8 @@ const requestService = {
   getRetouchStatuses,
   updateRetouchStatusesAndLinks,
   getRequestStatuses,
-  getPhotographerStats
+  getPhotographerStats,
+  getRetoucherStats
 };
 
 export default requestService;

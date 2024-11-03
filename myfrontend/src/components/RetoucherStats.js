@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import requestService from '../services/requestService';
-import './PhotographerStats.css';
+import './PhotographerStats.css'; // Use the same CSS file
 
-const PhotographerStats = () => {
+const RetoucherStats = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -10,10 +10,10 @@ const PhotographerStats = () => {
   const fetchStats = async (date) => {
     setLoading(true);
     try {
-      const response = await requestService.getPhotographerStats(date);
+      const response = await requestService.getRetoucherStats(date);
       setStats(response);
     } catch (error) {
-      console.error("Error fetching photographer stats:", error);
+      console.error("Error fetching retoucher stats:", error);
     } finally {
       setLoading(false);
     }
@@ -29,8 +29,8 @@ const PhotographerStats = () => {
 
   return (
     <div className="photographer-stats-container" style={{ marginLeft: '250px' }}>
-      <h2>Статистика по фотографам</h2>
-      <label className="date-label">
+      <h2>Статистика по ретушерам</h2>
+      <label>
         Выберите дату:
         <input type="date" value={selectedDate} onChange={handleDateChange} />
       </label>
@@ -38,10 +38,10 @@ const PhotographerStats = () => {
       {loading ? (
         <p>Загрузка данных...</p>
       ) : (
-        <table className="stats-table">
+        <table>
           <thead>
             <tr>
-              <th>Фотограф</th>
+              <th>Ретушер</th>
               <th>Количество заявок</th>
               <th>Количество товаров</th>
             </tr>
@@ -61,4 +61,4 @@ const PhotographerStats = () => {
   );
 };
 
-export default PhotographerStats;
+export default RetoucherStats;

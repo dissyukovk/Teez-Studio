@@ -61,7 +61,10 @@ from .views import (
     CategoryListView,
     categories_list,
     defect_operations_list,
-    PhotographerStatsView
+    PhotographerStatsView,
+    RetoucherStatsView,
+    ManagerProductStatsView,
+    StockmanListView
 )
 
 class UserDetailView(APIView):
@@ -108,6 +111,7 @@ urlpatterns = [
     path('api/upload-categories/', upload_categories, name='upload-categories'),
     path('public/defect-operations/', defect_operations_list, name='defect-operations-list'),
     path('api/photographer-stats/', PhotographerStatsView.as_view(), name='photographer-stats'),
+    path('api/retoucher-stats/', RetoucherStatsView.as_view(), name='retouch-stats'),
 
     # Основные API
     path('api/products/', product_list, name='product-list'),
@@ -130,6 +134,8 @@ urlpatterns = [
     path('api/move-statuses/', move_statuses, name='move_statuses'),
     path('api/stockman/', stockman_list, name='stockman_list'),
     path('api/categories/', categories_list, name='categories_list'),
+    path('api/manager-product-stats/', ManagerProductStatsView.as_view(), name='manager-product-stats'),
+    path('api/stockman-list/', StockmanListView.as_view(), name='stockman-list'),
        
     # Путь для получения деталей заявки
     path('requests/<int:request_number>/details/', request_details, name='request_details'),
