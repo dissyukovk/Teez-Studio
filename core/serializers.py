@@ -146,14 +146,15 @@ class StatusSerializer(serializers.ModelSerializer):
 class ProductOperationSerializer(serializers.ModelSerializer):
     operation_type_name = serializers.CharField(source='operation_type.name', read_only=True)
     user_full_name = serializers.SerializerMethodField()
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    barcode = serializers.CharField(source='product.barcode', read_only=True)
 
     class Meta:
         model = ProductOperation
-        fields = ['operation_type_name', 'user_full_name', 'date', 'comment']
+        fields = ['barcode', 'product_name', 'user_full_name', 'date', 'comment', 'operation_type_name']
 
     def get_user_full_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}" if obj.user else "Unknown"
-
 
 class OrderStatusSerializer(serializers.ModelSerializer):
     class Meta:

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.6.44:8000/';  // Убедитесь, что это правильный URL
+const API_URL = 'http://192.168.1.174:8000/';  // Убедитесь, что это правильный URL
 
 // Получаем токен из localStorage
 const getAuthHeaders = () => {
@@ -306,6 +306,19 @@ const getRetouchers = async () => {
   }
 };
 
+const getPhotographerStats = async (date) => {
+  try {
+    const response = await axios.get(`${API_URL}api/photographer-stats/`, {
+      params: { date },
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching photographer stats:', error);
+    throw error;
+  }
+};
+
 // Остальные функции...
 
 // Экспортируем все функции
@@ -327,7 +340,8 @@ const productService = {
   getMoveStatuses,
   getStockman,
   getPhotographers,
-  getRetouchers
+  getRetouchers,
+  getPhotographerStats
   // Остальные экспортируемые функции...
 };
 

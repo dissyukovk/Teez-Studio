@@ -23,7 +23,8 @@ import CurrentProductsFS from './components/CurrentProductsFS';
 import BarcodeHistory from './components/BarcodeHistory';
 import ManagerRequests from './components/ManagerRequests';
 import CategoryTable from './components/CategoryTable';
-
+import DefectOperations from './components/DefectOperations';
+import PhotographerStats from './components/PhotographerStats';
 
 // Import components for Senior Photographer
 import PhDistributeRequests from './pages/PhDistributeRequests';
@@ -66,7 +67,7 @@ const App = () => {
   return (
     <Router>
       <div className="app">
-        {isAuthenticated && <Sidebar user={user} />}
+      {isAuthenticated && !window.location.pathname.includes('/defect') && <Sidebar user={user} />}
         <Routes>
           <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
           <Route
@@ -151,6 +152,8 @@ const App = () => {
             element={isAuthenticated ? <ManagerRequests /> : <Navigate to="/login" />}
           />
           <Route path="/categories" element={<CategoryTable />} />
+          <Route path="/defect" element={<DefectOperations />} />
+          <Route path="/photographer-stats" element={<PhotographerStats />} />
         </Routes>
       </div>
     </Router>

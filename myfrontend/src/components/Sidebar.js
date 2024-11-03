@@ -71,6 +71,9 @@ function Sidebar({ user }) {
             <li>
               <NavLink to="/requests/onshoot" activeClassName="active">На съемке</NavLink>
             </li>
+            <li>
+              <NavLink to="/photographer-stats">Статистика фотографов</NavLink> {/* Новая ссылка */}
+            </li>
           </>
         )}
 

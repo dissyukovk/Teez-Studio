@@ -6,7 +6,7 @@ const getAuthHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-const API_URL = 'http://192.168.6.44:8000/';  // Убедитесь, что URL правильный
+const API_URL = 'http://192.168.1.174:8000/';  // Убедитесь, что URL правильный
 
 const getRequests = async ({
   status = '', 
@@ -233,6 +233,19 @@ const getRequestStatuses = async () => {
   }
 };
 
+const getPhotographerStats = async (date) => {
+  try {
+    const response = await axios.get(`${API_URL}api/photographer-stats/`, {
+      params: { date },
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching photographer stats:', error);
+    throw error;
+  }
+};
+
 const requestService = {
   getRequests,
   createRequest,
@@ -248,7 +261,8 @@ const requestService = {
   assignRetoucher,
   getRetouchStatuses,
   updateRetouchStatusesAndLinks,
-  getRequestStatuses
+  getRequestStatuses,
+  getPhotographerStats
 };
 
 export default requestService;

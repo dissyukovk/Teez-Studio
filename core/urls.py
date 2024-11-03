@@ -59,7 +59,9 @@ from .views import (
     ProductCategoryViewSet,
     upload_categories,
     CategoryListView,
-    categories_list
+    categories_list,
+    defect_operations_list,
+    PhotographerStatsView
 )
 
 class UserDetailView(APIView):
@@ -104,7 +106,8 @@ urlpatterns = [
     path('api/upload-batch/', upload_products_batch, name='upload-products-batch'),
     path('api/product-history/<str:barcode>/', get_history_by_barcode, name='history_by_barcode'),
     path('api/upload-categories/', upload_categories, name='upload-categories'),
-
+    path('public/defect-operations/', defect_operations_list, name='defect-operations-list'),
+    path('api/photographer-stats/', PhotographerStatsView.as_view(), name='photographer-stats'),
 
     # Основные API
     path('api/products/', product_list, name='product-list'),

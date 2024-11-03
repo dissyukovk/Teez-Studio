@@ -15,7 +15,8 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer
 from django.db import transaction, IntegrityError
-from django.db.models import Count, Max
+from django.db.models import Count, Max, F, Value, Q
+from django.db.models.functions import Concat
 from django.utils import timezone
 import logging
 from django_filters import rest_framework as filters
@@ -36,7 +37,7 @@ class OrderPagination(PageNumberPagination):
     max_page_size = 100
 
 class ProductHistoryPagination(PageNumberPagination):
-    page_size = 10
+    page_size = 100
     page_size_query_param = 'page_size'
     max_page_size = 100
 
@@ -1531,3 +1532,93 @@ def categories_list(request):
     # Serialization
     serializer = ProductCategorySerializer(paginated_categories, many=True)
     return paginator.get_paginated_response(serializer.data)
+
+
+@api_view(['GET'])
+def defect_operations_list(request):
+    # Основная фильтрация для операций с типом ID 25 (брак)
+    defect_operations = ProductOperation.objects.filter(operation_type_id=25)
+
+    # Параметры поиска и фильтрации
+    barcode = request.query_params.get('barcode', None)
+    product_name = request.query_params.get('name', None)
+    start_date = request.query_params.get('start_date', None)
+    end_date = request.query_params.get('end_date', None)
+    sort_field = request.query_params.get('sort_field', 'date')
+    sort_order = request.query_params.get('sort_order', 'desc')
+
+    # Фильтрация по штрихкоду и наименованию продукта
+    if barcode:
+        defect_operations = defect_operations.filter(product__barcode__icontains=barcode)
+    if product_name:
+        defect_operations = defect_operations.filter(product__name__icontains=product_name)
+
+    # Валидация и фильтрация по дате
+    date_format = '%Y-%m-%d'
+    try:
+        if start_date:
+            start_date = datetime.strptime(start_date, date_format)
+            defect_operations = defect_operations.filter(date__gte=start_date)
+        if end_date:
+            end_date = datetime.strptime(end_date, date_format)
+            defect_operations = defect_operations.filter(date__lte=end_date)
+    except ValueError:
+        return Response({"error": "Invalid date format, expected YYYY-MM-DD"}, status=400)
+
+    # Допустимые поля для сортировки
+    allowed_sort_fields = ['date', 'product__barcode', 'product__name', 'user_full_name']
+    
+    # Проверка наличия пользователя перед аннотацией и сортировкой
+    defect_operations = defect_operations.annotate(
+        user_full_name=Concat('user__first_name', Value(' '), 'user__last_name')
+    )
+    
+    # Проверяем, что поле сортировки разрешено
+    if sort_field not in allowed_sort_fields:
+        return Response({"error": f"Invalid sort field: {sort_field}"}, status=400)
+
+    # Применяем сортировку
+    if sort_order == 'desc':
+        sort_field = f'-{sort_field}'
+    
+    # Проверяем аннотацию и сортировку отдельно, чтобы исключить их как причину ошибки
+    try:
+        defect_operations = defect_operations.order_by(sort_field)
+    except Exception as e:
+        return Response({"error": f"Sorting error: {str(e)}"}, status=500)
+
+    # Пагинация
+    paginator = ProductHistoryPagination()
+    paginated_operations = paginator.paginate_queryset(defect_operations, request)
+
+    # Сериализация данных
+    serializer = ProductOperationSerializer(paginated_operations, many=True)
+    return paginator.get_paginated_response(serializer.data)
+
+class PhotographerStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        selected_date = request.query_params.get('date')
+        
+        if not selected_date:
+            return Response({"error": "Date parameter is required"}, status=400)
+
+        # Получаем список фотографов и вычисляем статистику
+        stats = (
+            User.objects
+            .filter(groups__name="Фотограф")
+            .annotate(
+                requests_count=Count(
+                    'photographer_requests',
+                    filter=Q(photographer_requests__status_id__in=[5, 6, 7, 8, 9], photographer_requests__photo_date__date=selected_date),
+                ),
+                total_products=Count(
+                    'photographer_requests__strequestproduct',
+                    filter=Q(photographer_requests__status_id__in=[5, 6, 7, 8, 9], photographer_requests__photo_date__date=selected_date),
+                )
+            )
+            .values('id', 'first_name', 'last_name', 'requests_count', 'total_products')
+        )
+
+        return Response(stats)
