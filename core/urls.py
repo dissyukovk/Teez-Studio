@@ -64,7 +64,8 @@ from .views import (
     PhotographerStatsView,
     RetoucherStatsView,
     ManagerProductStatsView,
-    StockmanListView
+    StockmanListView,
+    ReadyPhotosView
 )
 
 class UserDetailView(APIView):
@@ -136,6 +137,7 @@ urlpatterns = [
     path('api/categories/', categories_list, name='categories_list'),
     path('api/manager-product-stats/', ManagerProductStatsView.as_view(), name='manager-product-stats'),
     path('api/stockman-list/', StockmanListView.as_view(), name='stockman-list'),
+    path('public/ready-photos/', ReadyPhotosView.as_view(), name='ready-photos'),
        
     # Путь для получения деталей заявки
     path('requests/<int:request_number>/details/', request_details, name='request_details'),

@@ -17,7 +17,7 @@ const PhOnShootRequests = ({ status }) => {
   const fetchRequests = useCallback(async () => {
     try {
       const response = await requestService.getRequests({
-        status,
+        status: 3,
         requestNumber: searchTerm || undefined,
         barcode: barcodeTerm || undefined,
         sortField: sortField,

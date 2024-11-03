@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
-import ProductTable from './components/ProductTable'; // Replace StockmanProducts with ProductTable
+import ProductTable from './components/ProductTable';
 import ProductListManager from './components/ProductListManager';
 import Requests from './components/Requests';
 import Invoices from './components/Invoices';
-import AdminProducts from './components/AdminProducts'; // Import the new admin products page
+import AdminProducts from './components/AdminProducts';
 import authService from './services/authService';
 import Sidebar from './components/Sidebar';
 import PhPhotographerRequests from './pages/PhPhotographerRequests';
@@ -16,7 +16,7 @@ import SRInRetouchRequests from './pages/SRInRetouchRequests';
 import ReRequests from './pages/ReRequests';
 import OrderTable from './components/OrderTable';
 import OrderView from './pages/OrderView';
-import InvoiceView from './pages/InvoiceView'
+import InvoiceView from './pages/InvoiceView';
 import CreateOrder from './components/CreateOrder';
 import PrintBarcode from './components/PrintBarcode';
 import CurrentProductsFS from './components/CurrentProductsFS';
@@ -27,11 +27,55 @@ import DefectOperations from './components/DefectOperations';
 import PhotographerStats from './components/PhotographerStats';
 import RetoucherStats from './components/RetoucherStats';
 import ManagerProductStats from './components/ManagerProductStats';
-
-// Import components for Senior Photographer
+import ReadyPhotos from './components/ReadyPhotos';
 import PhDistributeRequests from './pages/PhDistributeRequests';
 import PhCheckRequests from './pages/PhCheckRequests';
 import PhOnShootRequests from './pages/PhOnShootRequests';
+
+const AppContent = ({ isAuthenticated, user }) => {
+  const location = useLocation();
+
+  // Define routes that should not display the sidebar
+  const noSidebarRoutes = ['/defect', '/ready-photos'];
+  const showSidebar = isAuthenticated && !noSidebarRoutes.includes(location.pathname);
+
+  return (
+    <div className="app">
+      {showSidebar && <Sidebar user={user} />}
+      <Routes>
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
+        <Route path="/" element={isAuthenticated ? <HomePage user={user} /> : <Navigate to="/login" />} />
+        <Route path="/products" element={isAuthenticated ? <ProductTable /> : <Navigate to="/login" />} />
+        <Route path="/requests" element={isAuthenticated ? <Requests /> : <Navigate to="/login" />} />
+        <Route path="/invoices" element={isAuthenticated ? <Invoices /> : <Navigate to="/login" />} />
+        <Route path="/invoices/:invoiceNumber" element={<InvoiceView />} />
+        <Route path="/admin-products" element={isAuthenticated ? <AdminProducts /> : <Navigate to="/login" />} />
+        <Route path="/orders" element={isAuthenticated ? <OrderTable /> : <Navigate to="/login" />} />
+        <Route path="/orders/:orderNumber" element={isAuthenticated ? <OrderView /> : <Navigate to="/login" />} />
+        <Route path="/create-order" element={<CreateOrder />} />
+        <Route path="/requests/distribute" element={isAuthenticated ? <PhDistributeRequests /> : <Navigate to="/login" />} />
+        <Route path="/products-manager" element={isAuthenticated ? <ProductListManager /> : <Navigate to="/login" />} />
+        <Route path="/requests/check" element={isAuthenticated ? <PhCheckRequests /> : <Navigate to="/login" />} />
+        <Route path="/requests/onshoot" element={isAuthenticated ? <PhOnShootRequests /> : <Navigate to="/login" />} />
+        <Route path="/requests/photographer" element={isAuthenticated ? <PhPhotographerRequests user={user} /> : <Navigate to="/login" />} />
+        <Route path="/sr/requests/distribute" element={isAuthenticated ? <SRDistributeRequests user={user} /> : <Navigate to="/login" />} />
+        <Route path="/sr/requests/check" element={isAuthenticated ? <SRCheckRequests user={user} /> : <Navigate to="/login" />} />
+        <Route path="/sr/requests/inretouch" element={isAuthenticated ? <SRInRetouchRequests user={user} /> : <Navigate to="/login" />} />
+        <Route path="/requests/retoucher" element={isAuthenticated ? <ReRequests user={user} /> : <Navigate to="/login" />} />
+        <Route path="/print-barcode" element={isAuthenticated ? <PrintBarcode /> : <Navigate to="/login" />} />
+        <Route path="/current-products-fs" element={isAuthenticated ? <CurrentProductsFS /> : <Navigate to="/login" />} />
+        <Route path="/barcode-history" element={isAuthenticated ? <BarcodeHistory /> : <Navigate to="/login" />} />
+        <Route path="/requests/manager" element={isAuthenticated ? <ManagerRequests /> : <Navigate to="/login" />} />
+        <Route path="/categories" element={<CategoryTable />} />
+        <Route path="/defect" element={<DefectOperations />} />
+        <Route path="/photographer-stats" element={<PhotographerStats />} />
+        <Route path="/retoucher-stats" element={isAuthenticated ? <RetoucherStats /> : <Navigate to="/login" />} />
+        <Route path="/manager-product-stats" element={<ManagerProductStats />} />
+        <Route path="/ready-photos" element={<ReadyPhotos />} />
+      </Routes>
+    </div>
+  );
+};
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -68,101 +112,7 @@ const App = () => {
 
   return (
     <Router>
-      <div className="app">
-      {isAuthenticated && !window.location.pathname.includes('/defect') && <Sidebar user={user} />}
-        <Routes>
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
-          <Route
-            path="/"
-            element={isAuthenticated ? <HomePage user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/products"
-            element={isAuthenticated ? <ProductTable /> : <Navigate to="/login" />} // Use ProductTable instead of StockmanProducts
-          />
-          <Route
-            path="/requests"
-            element={isAuthenticated ? <Requests /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/invoices"
-            element={isAuthenticated ? <Invoices /> : <Navigate to="/login" />}
-          />
-          <Route path="/invoices/:invoiceNumber" element={<InvoiceView />} />
-          <Route
-            path="/admin-products" // Add route for the admin's full product database
-            element={isAuthenticated ? <AdminProducts /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/orders"
-            element={isAuthenticated ? <OrderTable /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/orders/:orderNumber"
-            element={isAuthenticated ? <OrderView /> : <Navigate to="/login" />}
-          />
-          <Route path="/create-order" element={<CreateOrder />} />
-          {/* Routes for Senior Photographer */}
-          <Route
-            path="/requests/distribute"
-            element={isAuthenticated ? <PhDistributeRequests /> : <Navigate to="/login" />}
-          />
-          <Route path="/products-manager" element={isAuthenticated ? <ProductListManager /> : <Navigate to="/login" />} />
-          <Route
-            path="/requests/check"
-            element={isAuthenticated ? <PhCheckRequests /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/requests/onshoot"
-            element={isAuthenticated ? <PhOnShootRequests /> : <Navigate to="/login" />}
-          />
-           <Route
-            path="/requests/photographer"
-            element={isAuthenticated ? <PhPhotographerRequests user={user} /> : <Navigate to="/login" />}
-          />
-          {/* Routes for Senior Retoucher */}
-          <Route
-            path="/sr/requests/distribute"
-            element={isAuthenticated ? <SRDistributeRequests user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/sr/requests/check"
-            element={isAuthenticated ? <SRCheckRequests user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/sr/requests/inretouch"
-            element={isAuthenticated ? <SRInRetouchRequests user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/requests/retoucher"
-            element={isAuthenticated ? <ReRequests user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/print-barcode"
-            element={isAuthenticated ? <PrintBarcode /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/current-products-fs"
-            element={isAuthenticated ? <CurrentProductsFS /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/barcode-history"
-            element={isAuthenticated ? <BarcodeHistory /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/requests/manager"
-            element={isAuthenticated ? <ManagerRequests /> : <Navigate to="/login" />}
-          />
-          <Route path="/categories" element={<CategoryTable />} />
-          <Route path="/defect" element={<DefectOperations />} />
-          <Route path="/photographer-stats" element={<PhotographerStats />} />
-          <Route
-            path="/retoucher-stats"
-            element={isAuthenticated ? <RetoucherStats /> : <Navigate to="/login" />}
-          />
-          <Route path="/manager-product-stats" element={<ManagerProductStats />} />
-        </Routes>
-      </div>
+      <AppContent isAuthenticated={isAuthenticated} user={user} />
     </Router>
   );
 };

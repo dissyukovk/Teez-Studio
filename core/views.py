@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class ProductPagination(PageNumberPagination):
     page_size = 100
     page_size_query_param = 'page_size'
-    max_page_size = 1000
+    max_page_size = 10000
 
 class OrderPagination(PageNumberPagination):
     page_size = 10
@@ -1717,3 +1717,59 @@ class StockmanListView(APIView):
         stockmen = stockman_group.user_set.all().values('id', 'first_name', 'last_name')
         
         return Response(stockmen)
+
+class ReadyPhotosView(APIView):
+    permission_classes = []  # Public access
+    pagination_class = ProductPagination  # Use pagination here
+
+    def get(self, request):
+        barcode = request.query_params.get('barcode', None)
+        date = request.query_params.get('date', None)
+        seller_id = request.query_params.get('seller_id', None)
+        sort_field = request.query_params.get('sort_field', 'product__barcode')  # Default sort by product barcode
+        sort_order = request.query_params.get('sort_order', 'asc')
+
+        # Start with filtering STRequestProduct entries based on the specified status conditions
+        ready_products = STRequestProduct.objects.filter(
+            Q(request__status_id__in=[8, 9]) & Q(retouch_status_id=2)
+        ).select_related('product', 'request')
+
+        # Filter by barcode if provided
+        if barcode:
+            ready_products = ready_products.filter(product__barcode__icontains=barcode)
+
+        # Filter by seller_id if provided
+        if seller_id:
+            ready_products = ready_products.filter(product__seller__icontains=seller_id)
+
+        # Filter by date if provided
+        if date:
+            try:
+                date_obj = datetime.strptime(date, "%Y-%m-%d")
+                ready_products = ready_products.filter(request__creation_date__date=date_obj)
+            except ValueError:
+                return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+        # Handle sorting by related fields correctly
+        if sort_field in ['barcode', 'name', 'seller_id']:
+            sort_field = f'product__{sort_field}'
+        if sort_order == 'desc':
+            sort_field = f'-{sort_field}'
+        ready_products = ready_products.order_by(sort_field)
+
+        # Paginate results
+        paginator = ProductPagination()
+        paginated_ready_products = paginator.paginate_queryset(ready_products, request)
+
+        # Serialize data
+        data = [
+            {
+                "barcode": rp.product.barcode,
+                "name": rp.product.name,
+                "seller_id": rp.product.seller,
+                "retouch_link": rp.product.retouch_link
+            }
+            for rp in paginated_ready_products if rp.product.retouch_link
+        ]
+
+        return paginator.get_paginated_response(data)
