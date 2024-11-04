@@ -11,14 +11,13 @@ const ManagerRequests = () => {
   const [error, setError] = useState(null);
   const [searchRequestNumber, setSearchRequestNumber] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
+  const [searchProductName, setSearchProductName] = useState(''); // новое состояние для поиска по наименованию продукта
   const [selectedStatus, setSelectedStatus] = useState('');
   const [statuses, setStatuses] = useState([]);
   const [selectedRequestNumber, setSelectedRequestNumber] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Новые состояния для сортировки
-  const [sortField, setSortField] = useState('RequestNumber');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortField, setSortField] = useState(''); // для поля сортировки
+  const [sortOrder, setSortOrder] = useState('asc'); // для порядка сортировки
 
   // Загрузка списка статусов
   useEffect(() => {
@@ -33,9 +32,10 @@ const ManagerRequests = () => {
       const response = await requestService.getRequests({
         requestNumber: searchRequestNumber,
         barcode: searchBarcode,
+        productName: searchProductName, // добавляем в параметры запроса
         status: selectedStatus,
-        sortField,
-        sortOrder,
+        sortField: sortField,
+        sortOrder: sortOrder,
         page: page
       });
 
@@ -51,7 +51,7 @@ const ManagerRequests = () => {
       setError('Не удалось загрузить заявки');
       setLoading(false);
     }
-  }, [searchRequestNumber, searchBarcode, selectedStatus, sortField, sortOrder]);
+  }, [searchRequestNumber, searchBarcode, searchProductName, selectedStatus, sortField, sortOrder]);
 
   useEffect(() => {
     fetchRequests(currentPage);
@@ -68,13 +68,10 @@ const ManagerRequests = () => {
     fetchRequests(currentPage); // Обновляем список после закрытия модального окна
   };
 
-  // Функция для обработки кликов по заголовкам таблицы
   const handleSort = (field) => {
-    // Если кликнули по тому же полю, меняем порядок сортировки
-    const newSortOrder = sortField === field && sortOrder === 'asc' ? 'desc' : 'asc';
+    setSortOrder(sortField === field && sortOrder === 'asc' ? 'desc' : 'asc');
     setSortField(field);
-    setSortOrder(newSortOrder);
-    setCurrentPage(1); // Сбрасываем на первую страницу при изменении сортировки
+    setCurrentPage(1);
   };
 
   return (
@@ -92,6 +89,12 @@ const ManagerRequests = () => {
           placeholder="Поиск по штрихкоду"
           value={searchBarcode}
           onChange={(e) => setSearchBarcode(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Поиск по наименованию товара"
+          value={searchProductName}
+          onChange={(e) => setSearchProductName(e.target.value)}
         />
         <select
           value={selectedStatus}
@@ -115,10 +118,10 @@ const ManagerRequests = () => {
           <thead>
             <tr>
               <th onClick={() => handleSort('RequestNumber')}>
-                Номер заявки {sortField === 'RequestNumber' && (sortOrder === 'asc' ? '▲' : '▼')}
+                Номер заявки {sortField === 'RequestNumber' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
               </th>
               <th onClick={() => handleSort('creation_date')}>
-                Дата создания {sortField === 'creation_date' && (sortOrder === 'asc' ? '▲' : '▼')}
+                Дата создания {sortField === 'creation_date' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
               </th>
               <th>Товаровед</th>
               <th>Фотограф</th>
