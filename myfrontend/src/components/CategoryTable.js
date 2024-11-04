@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import './CategoryTable.css';
 
-const API_URL = 'http://192.168.1.174:8000/';
+const API_URL = 'http://192.168.6.241:8000/';
 
 const CategoryTable = () => {
   const [categories, setCategories] = useState([]);

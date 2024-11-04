@@ -31,12 +31,13 @@ import ReadyPhotos from './components/ReadyPhotos';
 import PhDistributeRequests from './pages/PhDistributeRequests';
 import PhCheckRequests from './pages/PhCheckRequests';
 import PhOnShootRequests from './pages/PhOnShootRequests';
+import AutoUploadTest from './pages/AutoUploadTest';
 
 const AppContent = ({ isAuthenticated, user }) => {
   const location = useLocation();
 
   // Define routes that should not display the sidebar
-  const noSidebarRoutes = ['/defect', '/ready-photos'];
+  const noSidebarRoutes = ['/defect', '/ready-photos', '/current-products-fs', '/barcode-history'];
   const showSidebar = isAuthenticated && !noSidebarRoutes.includes(location.pathname);
 
   return (
@@ -63,8 +64,8 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/sr/requests/inretouch" element={isAuthenticated ? <SRInRetouchRequests user={user} /> : <Navigate to="/login" />} />
         <Route path="/requests/retoucher" element={isAuthenticated ? <ReRequests user={user} /> : <Navigate to="/login" />} />
         <Route path="/print-barcode" element={isAuthenticated ? <PrintBarcode /> : <Navigate to="/login" />} />
-        <Route path="/current-products-fs" element={isAuthenticated ? <CurrentProductsFS /> : <Navigate to="/login" />} />
-        <Route path="/barcode-history" element={isAuthenticated ? <BarcodeHistory /> : <Navigate to="/login" />} />
+        <Route path="/current-products-fs" element={<CurrentProductsFS />} />
+        <Route path="/barcode-history" element={<BarcodeHistory />} />
         <Route path="/requests/manager" element={isAuthenticated ? <ManagerRequests /> : <Navigate to="/login" />} />
         <Route path="/categories" element={<CategoryTable />} />
         <Route path="/defect" element={<DefectOperations />} />
@@ -72,6 +73,7 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/retoucher-stats" element={isAuthenticated ? <RetoucherStats /> : <Navigate to="/login" />} />
         <Route path="/manager-product-stats" element={<ManagerProductStats />} />
         <Route path="/ready-photos" element={<ReadyPhotos />} />
+        <Route path="/upload-test" element={<AutoUploadTest />} />
       </Routes>
     </div>
   );

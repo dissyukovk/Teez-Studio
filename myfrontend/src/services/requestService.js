@@ -6,26 +6,28 @@ const getAuthHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-const API_URL = 'http://192.168.1.174:8000/';  // Убедитесь, что URL правильный
+const API_URL = 'http://192.168.6.241:8000/';  // Убедитесь, что URL правильный
 
 const getRequests = async ({
   status = '', 
   requestNumber = '',
   barcode = '',
+  productName = '', // Новый параметр для наименования продукта
   sortField = '',
   sortOrder = 'asc',
   page = 1,
   per_page = 100,
-  photographer = '',  // Фильтр по фотографу
-  retoucher = '',     // Фильтр по ретушеру
+  photographer = '',  
+  retoucher = '',     
 }) => {
   try {
     const params = {
       status,
-      photographer: photographer || undefined,  // Используем photographer, если он задан
-      retoucher: retoucher || undefined,        // Используем retoucher, если он задан
+      photographer: photographer || undefined,
+      retoucher: retoucher || undefined,
       RequestNumber: requestNumber || undefined,
       barcode: barcode || undefined,
+      productName: productName || undefined, // Передаем параметр productName
       sort_field: sortField,
       sort_order: sortOrder,
       page: page,

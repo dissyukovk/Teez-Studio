@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import NotFound
 from django.contrib.auth.models import User, Group
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -40,7 +41,7 @@ class OrderPagination(PageNumberPagination):
 class ProductHistoryPagination(PageNumberPagination):
     page_size = 100
     page_size_query_param = 'page_size'
-    max_page_size = 100
+    max_page_size = 1000
 
 class CategoryPagination(PageNumberPagination):
     page_size = 10  # Default page size
@@ -323,6 +324,7 @@ def strequest_list(request):
     RequestNumber = request.query_params.get('RequestNumber', None)
     stockman = request.query_params.get('stockman', None)
     barcode = request.query_params.get('barcode', None)
+    product_name = request.query_params.get('productName', None)  # Новый параметр для наименования продукта
 
     if RequestNumber:
         strequests = strequests.filter(RequestNumber__icontains=RequestNumber)
@@ -330,6 +332,8 @@ def strequest_list(request):
         strequests = strequests.filter(stockman__username__icontains=stockman)
     if barcode:
         strequests = strequests.filter(strequestproduct__product__barcode__icontains=barcode)
+    if product_name:
+        strequests = strequests.filter(strequestproduct__product__name__icontains=product_name)  # Фильтрация по наименованию продукта
 
     # Сортировка
     sort_field = request.query_params.get('sort_field', 'RequestNumber')
@@ -344,7 +348,6 @@ def strequest_list(request):
     paginated_strequests = paginator.paginate_queryset(strequests, request)
     serializer = STRequestSerializer(paginated_strequests, many=True)
     return paginator.get_paginated_response(serializer.data)
-
 
 # Фильтрация для Invoice с пагинацией и фильтрацией по штрихкоду товара
 @api_view(['GET'])
@@ -1537,10 +1540,10 @@ def categories_list(request):
 
 @api_view(['GET'])
 def defect_operations_list(request):
-    # Основная фильтрация для операций с типом ID 25 (брак)
+    # Filter for operations with type ID 25 (defect)
     defect_operations = ProductOperation.objects.filter(operation_type_id=25)
 
-    # Параметры поиска и фильтрации
+    # Search and filter parameters
     barcode = request.query_params.get('barcode', None)
     product_name = request.query_params.get('name', None)
     start_date = request.query_params.get('start_date', None)
@@ -1548,13 +1551,13 @@ def defect_operations_list(request):
     sort_field = request.query_params.get('sort_field', 'date')
     sort_order = request.query_params.get('sort_order', 'desc')
 
-    # Фильтрация по штрихкоду и наименованию продукта
+    # Filter by barcode and product name
     if barcode:
         defect_operations = defect_operations.filter(product__barcode__icontains=barcode)
     if product_name:
         defect_operations = defect_operations.filter(product__name__icontains=product_name)
 
-    # Валидация и фильтрация по дате
+    # Filter by date
     date_format = '%Y-%m-%d'
     try:
         if start_date:
@@ -1566,33 +1569,30 @@ def defect_operations_list(request):
     except ValueError:
         return Response({"error": "Invalid date format, expected YYYY-MM-DD"}, status=400)
 
-    # Допустимые поля для сортировки
-    allowed_sort_fields = ['date', 'product__barcode', 'product__name', 'user_full_name']
-    
-    # Проверка наличия пользователя перед аннотацией и сортировкой
+    # Add user full name annotation for sorting
     defect_operations = defect_operations.annotate(
         user_full_name=Concat('user__first_name', Value(' '), 'user__last_name')
     )
-    
-    # Проверяем, что поле сортировки разрешено
+
+    # Validate and apply sorting
+    allowed_sort_fields = ['date', 'product__barcode', 'product__name', 'user_full_name']
     if sort_field not in allowed_sort_fields:
         return Response({"error": f"Invalid sort field: {sort_field}"}, status=400)
 
-    # Применяем сортировку
     if sort_order == 'desc':
         sort_field = f'-{sort_field}'
-    
-    # Проверяем аннотацию и сортировку отдельно, чтобы исключить их как причину ошибки
-    try:
-        defect_operations = defect_operations.order_by(sort_field)
-    except Exception as e:
-        return Response({"error": f"Sorting error: {str(e)}"}, status=500)
 
-    # Пагинация
+    defect_operations = defect_operations.order_by(sort_field)
+
+    # Pagination
     paginator = ProductHistoryPagination()
     paginated_operations = paginator.paginate_queryset(defect_operations, request)
 
-    # Сериализация данных
+    # Проверка, если запрашиваемая страница не найдена
+    if paginated_operations is None:
+        raise NotFound(detail="Invalid page.")
+
+    # Serialize data
     serializer = ProductOperationSerializer(paginated_operations, many=True)
     return paginator.get_paginated_response(serializer.data)
 

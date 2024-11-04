@@ -16,6 +16,10 @@ const ManagerRequests = () => {
   const [selectedRequestNumber, setSelectedRequestNumber] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Новые состояния для сортировки
+  const [sortField, setSortField] = useState('RequestNumber');
+  const [sortOrder, setSortOrder] = useState('asc');
+
   // Загрузка списка статусов
   useEffect(() => {
     requestService.getRequestStatuses()
@@ -30,6 +34,8 @@ const ManagerRequests = () => {
         requestNumber: searchRequestNumber,
         barcode: searchBarcode,
         status: selectedStatus,
+        sortField,
+        sortOrder,
         page: page
       });
 
@@ -45,7 +51,7 @@ const ManagerRequests = () => {
       setError('Не удалось загрузить заявки');
       setLoading(false);
     }
-  }, [searchRequestNumber, searchBarcode, selectedStatus]);
+  }, [searchRequestNumber, searchBarcode, selectedStatus, sortField, sortOrder]);
 
   useEffect(() => {
     fetchRequests(currentPage);
@@ -60,6 +66,15 @@ const ManagerRequests = () => {
     setIsModalOpen(false);
     setSelectedRequestNumber(null);
     fetchRequests(currentPage); // Обновляем список после закрытия модального окна
+  };
+
+  // Функция для обработки кликов по заголовкам таблицы
+  const handleSort = (field) => {
+    // Если кликнули по тому же полю, меняем порядок сортировки
+    const newSortOrder = sortField === field && sortOrder === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortOrder(newSortOrder);
+    setCurrentPage(1); // Сбрасываем на первую страницу при изменении сортировки
   };
 
   return (
@@ -99,8 +114,12 @@ const ManagerRequests = () => {
         <table className="requests-table">
           <thead>
             <tr>
-              <th>Номер заявки</th>
-              <th>Дата создания</th>
+              <th onClick={() => handleSort('RequestNumber')}>
+                Номер заявки {sortField === 'RequestNumber' && (sortOrder === 'asc' ? '▲' : '▼')}
+              </th>
+              <th onClick={() => handleSort('creation_date')}>
+                Дата создания {sortField === 'creation_date' && (sortOrder === 'asc' ? '▲' : '▼')}
+              </th>
               <th>Товаровед</th>
               <th>Фотограф</th>
               <th>Ретушер</th>
@@ -111,7 +130,7 @@ const ManagerRequests = () => {
           <tbody>
             {requests && requests.length > 0 ? (
               requests.map((request, index) => (
-                <tr key={request.RequestNumber || index}>
+                <tr key={`${request.RequestNumber}-${index}`}>
                   <td onClick={() => openModal(request.RequestNumber)}>{request.RequestNumber}</td>
                   <td>{request.creation_date}</td>
                   <td>{request.stockman ? `${request.stockman.first_name} ${request.stockman.last_name}` : 'Не назначен'}</td>

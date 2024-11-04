@@ -13,6 +13,15 @@ const InvoiceView = () => {
     const fetchInvoice = async () => {
       try {
         const data = await invoiceService.getInvoiceDetails(invoiceNumber);
+        
+        // Сортируем продукты по полю "Ячейка"
+        data.products = data.products.sort((a, b) => {
+          if (a.cell && b.cell) {
+            return a.cell.localeCompare(b.cell);
+          }
+          return 0;
+        });
+
         setInvoice(data);
         setLoading(false);
       } catch (err) {
@@ -34,7 +43,6 @@ const InvoiceView = () => {
         <head>
           <title>Печать накладной</title>
           <style>
-            /* Добавьте стили для печати */
             body { font-family: Arial, sans-serif; margin: 20px; }
             .invoice-products-table { width: 100%; border-collapse: collapse; }
             .invoice-products-table th, .invoice-products-table td { border: 1px solid #ddd; padding: 8px; }
@@ -48,13 +56,11 @@ const InvoiceView = () => {
     `);
     printWindow.document.close();
   
-    // Печать с задержкой для загрузки содержимого
     printWindow.onload = () => {
       printWindow.print();
       printWindow.close();
     };
   };
-  
 
   if (loading) return <div>Загрузка...</div>;
   if (error) return <div>{error}</div>;
@@ -79,7 +85,7 @@ const InvoiceView = () => {
               <tr key={product.barcode}>
                 <td>{product.barcode}</td>
                 <td>{product.name}</td>
-                <td>1</td> {/* Указываем количество 1 для каждого товара */}
+                <td>1</td>
                 <td>{product.cell || 'Не указана'}</td>
               </tr>
             ))}

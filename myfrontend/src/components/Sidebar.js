@@ -124,23 +124,29 @@ function Sidebar({ user }) {
               </>
               
             )}
-            {/* Менеджер Section */}
-              {user.groups.includes('Менеджер') && (
-                <>
-                <li>
-                  <NavLink to="/requests/manager" activeClassName="active">Заявки (менеджер)</NavLink>
-                </li>
-                <li><NavLink to="/products-manager" activeClassName="active">Список товаров (менеджер)</NavLink></li>
-                <li><NavLink to="/manager-product-stats" activeClassName="active">Статистика товароведов (менеджер)</NavLink></li>
-                <li>
-                  <NavLink to="/photographer-stats">Статистика фотографов</NavLink> {/* Новая ссылка */}
-                </li>
-                <li><NavLink to="/retoucher-stats" activeClassName="active">
-                  Статистика ретушеров
-                  </NavLink>
-                  </li>
-                </>
-              )}
+        {/* Менеджер Section */}
+        {user.groups.includes('Менеджер') && (
+          <>
+            <li>
+              <NavLink to="/requests/manager" activeClassName="active">Заявки (менеджер)</NavLink>
+            </li>
+            <li><NavLink to="/products-manager" activeClassName="active">Список товаров (менеджер)</NavLink></li>
+            <li><NavLink to="/manager-product-stats" activeClassName="active">Статистика товароведов (менеджер)</NavLink></li>
+            <li>
+              <NavLink to="/photographer-stats">Статистика фотографов</NavLink> {/* Новая ссылка */}
+            </li>
+            <li><NavLink to="/retoucher-stats" activeClassName="active">
+              Статистика ретушеров
+            </NavLink>
+            </li>
+            <li>
+              <NavLink to="/orders" activeClassName="active">Заказы</NavLink> {/* Новый пункт */}
+            </li>
+            <li>
+              <NavLink to="/create-order" activeClassName="active">Создание заказов</NavLink>
+            </li>
+          </>
+        )}
       </ul>
       {/* User Info at the bottom */}
       <div className="user-info" onClick={() => setShowLogout(!showLogout)}>
