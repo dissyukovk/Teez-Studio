@@ -36,7 +36,7 @@ function Sidebar({ user }) {
               <NavLink to="/invoices" activeClassName="active">Накладные (товаровед)</NavLink>
             </li>
             <li>
-              <NavLink to="/orders" activeClassName="active">Заказ (товаровед)</NavLink>
+              <NavLink to="/fs_list" activeClassName="active">Заказ (товаровед)</NavLink>
             </li>
             <li>
               <NavLink to="/print-barcode" activeClassName="active">Печать ШК</NavLink>

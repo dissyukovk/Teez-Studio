@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx'; // Import xlsx library
 import orderService from '../services/orderService';
 import './okz_OrderView.css';
 
@@ -10,8 +11,8 @@ const OkzOrderView = () => {
   const [scannedCode, setScannedCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  let scanBuffer = ''; // Буфер для хранения сканируемых символов
-  let scanTimeout = null; // Таймер для сброса буфера
+  let scanBuffer = ''; // Buffer for barcode scanning
+  let scanTimeout = null; // Timeout for clearing the buffer
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -30,34 +31,27 @@ const OkzOrderView = () => {
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Проверка: только цифровые клавиши
       if (!isNaN(event.key) && scanBuffer.length < 13) {
         scanBuffer += event.key;
-
-        // Сбрасываем предыдущий таймер
         if (scanTimeout) clearTimeout(scanTimeout);
 
-        // Устанавливаем новый таймер на 3 секунды
         scanTimeout = setTimeout(() => {
-          scanBuffer = ''; // Очистка буфера, если ввод не завершён
+          scanBuffer = '';
         }, 3000);
       }
 
-      // Проверка на завершение ввода штрихкода
       if (event.key === 'Enter' && scanBuffer.length === 13) {
         handleBarcode(scanBuffer);
-        scanBuffer = ''; // Очистка буфера после обработки
-        if (scanTimeout) clearTimeout(scanTimeout); // Очистка таймера
+        scanBuffer = '';
+        if (scanTimeout) clearTimeout(scanTimeout);
       }
     };
 
-    // Добавляем обработчик для событий клавиатуры
     window.addEventListener('keydown', handleKeyDown);
 
-    // Удаляем обработчик при размонтировании компонента
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      if (scanTimeout) clearTimeout(scanTimeout); // Очищаем таймер при размонтировании
+      if (scanTimeout) clearTimeout(scanTimeout);
     };
   }, []);
 
@@ -88,12 +82,38 @@ const OkzOrderView = () => {
     }
   };
 
+  const downloadExcel = () => {
+    if (!order) return;
+
+    const ws = XLSX.utils.aoa_to_sheet([
+      [`Заказ № ${orderNumber}`], // First row with order number
+      [], // Empty row
+      ['Штрихкод', 'Наименование', 'Ячейка', 'Статус сборки', 'Время сборки'] // Header row
+    ]);
+
+    order.products.forEach((product) => {
+      XLSX.utils.sheet_add_aoa(ws, [[
+        product.barcode,
+        product.name,
+        product.cell,
+        product.assembled ? 'Собран' : 'Не собран',
+        product.assembled_date ? new Date(product.assembled_date).toLocaleString() : ""
+      ]], { origin: -1 });
+    });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Заказ');
+    const filename = `Заказ №${orderNumber} от ${new Date().toLocaleDateString()}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  };
+
   if (loading) return <div>Загрузка...</div>;
   if (error) return <div>{error}</div>;
 
   return (
     <div className="order-view" onKeyDown={(e) => e.preventDefault()}>
       <button className="back-button" onClick={() => navigate('/okz_list')}>Назад</button>
+      <button className="download-button" onClick={downloadExcel}>Скачать Excel</button>
       <div className="order-header">
         <h1>Детали заказа {orderNumber}</h1>
         <div className="order-status">
@@ -111,6 +131,7 @@ const OkzOrderView = () => {
               <th>Наименование</th>
               <th>Ячейка</th>
               <th>Статус сборки</th>
+              <th>Время сборки</th>
             </tr>
           </thead>
           <tbody>
@@ -122,6 +143,7 @@ const OkzOrderView = () => {
                 <td style={{ color: product.assembled ? 'green' : 'red' }}>
                   {product.assembled ? 'Собран' : 'Не собран'}
                 </td>
+                <td>{product.assembled_date ? new Date(product.assembled_date).toLocaleString() : ""}</td>
               </tr>
             ))}
           </tbody>
