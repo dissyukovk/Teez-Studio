@@ -85,15 +85,30 @@ class OrderStatus(models.Model):
 class Order(models.Model):
     OrderNumber = models.CharField(max_length=13, unique=True, null=True)
     date = models.DateTimeField(null=True, blank=True)
-    creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)  # Reference to the user
-    status = models.ForeignKey(OrderStatus, on_delete=models.SET_NULL, null=True, blank=True)  # Reference to OrderStatus
+    creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.ForeignKey(OrderStatus, on_delete=models.SET_NULL, null=True, blank=True)
+
+    assembly_date = models.DateTimeField(null=True, blank=True)  # Дата сборки
+    assembly_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assembly_user'
+    )  # Пользователь, который сделал сборку
+    accept_date = models.DateTimeField(null=True, blank=True)  # Дата приемки
+    accept_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='accept_user'
+    )  # Пользователь, который принял товар
 
     def __str__(self):
         return self.OrderNumber
 
 class OrderProduct(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)
+
+    assembled = models.BooleanField(default=False)  # Assembly status
+    assembled_date = models.DateTimeField(null=True, blank=True)  # Date and time of assembly
+
+    accepted = models.BooleanField(default=False)  # Acceptance status
+    accepted_date = models.DateTimeField(null=True, blank=True)  # Date and time of acceptance
 
 class Invoice(models.Model):
     InvoiceNumber = models.CharField(max_length=13, unique=True, null=True)

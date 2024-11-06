@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from . import views
 from .views import (
     product_list, 
     STRequestViewSet, 
@@ -138,6 +139,12 @@ urlpatterns = [
     path('api/manager-product-stats/', ManagerProductStatsView.as_view(), name='manager-product-stats'),
     path('api/stockman-list/', StockmanListView.as_view(), name='stockman-list'),
     path('public/ready-photos/', ReadyPhotosView.as_view(), name='ready-photos'),
+    path('assembly-start/<str:order_number>/', views.start_assembly, name='start_assembly'),
+    path('assembly/<str:order_number>/<str:product_barcode>/', views.assemble_product, name='assemble_product'),
+    path('accept-start/<str:order_number>/', views.start_acceptance, name='start_acceptance'),
+    path('accept-order/<str:order_number>/', views.accept_order_products, name='accept_products'),
+    path('accepted-order/<str:order_number>/<int:new_status>/', views.update_order_status, name='update_order_status'),
+
        
     # Путь для получения деталей заявки
     path('requests/<int:request_number>/details/', request_details, name='request_details'),

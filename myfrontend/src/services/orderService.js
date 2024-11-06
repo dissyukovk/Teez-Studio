@@ -6,7 +6,7 @@ const getAuthHeaders = () => {
 };
 
 
-const API_URL = 'http://192.168.6.241:8000/';
+const API_URL = 'http://192.168.6.251:8000/';
 
 const getOrderStatuses = async () => {
   try {
@@ -66,12 +66,71 @@ const createOrder = async (barcodes) => {
   }
 };
 
+// Function to start assembly
+const startAssembly = async (orderNumber, data) => {
+  try {
+    const response = await axios.post(`${API_URL}assembly-start/${orderNumber}/`, data, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error starting assembly:', error);
+    throw error;
+  }
+};
+
+const assembleProduct = async (orderNumber, barcode) => {
+  try {
+    const response = await axios.post(`${API_URL}assembly/${orderNumber}/${barcode}/`, {}, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error assembling product:', error);
+    throw error;
+  }
+};
+
+// Start acceptance process
+const startAcceptance = async (orderNumber, userId) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}accept-start/${orderNumber}/`,
+      { user_id: userId },
+      { headers: getAuthHeaders() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при начале приемки:', error);
+    throw error;
+  }
+};
+
+// Accept products in the order
+const acceptProducts = async (orderNumber, barcodes) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}accept-order/${orderNumber}/`,
+      { barcodes },
+      { headers: getAuthHeaders() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при приемке товаров:', error);
+    throw error;
+  }
+};
+
 const orderService = {
   getOrderStatuses,
   getOrders,
   updateOrderStatus,
   getOrderDetails,
-  createOrder
+  createOrder,
+  startAssembly,
+  assembleProduct,
+  startAcceptance,
+  acceptProducts
 };
 
 export default orderService;

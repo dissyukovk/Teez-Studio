@@ -1,7 +1,7 @@
 const authService = {
   async login(username, password) {
     try {
-      const response = await fetch('http://192.168.6.241:8000/api/token/', {
+      const response = await fetch('http://192.168.6.251:8000/api/token/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,7 +52,7 @@ async getUserData() {
   }
 
   try {
-    const response = await fetch('http://192.168.6.241:8000/api/user/', {
+    const response = await fetch('http://192.168.6.251:8000/api/user/', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -62,10 +62,9 @@ async getUserData() {
 
     if (response.status === 401) {
       console.warn("Token expired, attempting to refresh...");
-      // Пробуем обновить токен, если истек
       try {
         await this.refreshToken();
-        return this.getUserData();  // Повторяем запрос после обновления токена
+        return this.getUserData();  // Retry after refreshing the token
       } catch (refreshError) {
         this.logout();
         throw new Error('Unauthorized: token refresh failed');
@@ -79,12 +78,16 @@ async getUserData() {
 
     const userData = await response.json();
     console.log("Fetched user data:", userData);
+
+    // Store user_id in localStorage
+    localStorage.setItem('user_id', userData.id);
+
     return userData;
   } catch (error) {
     console.error('Failed to fetch user data:', error);
     throw error;
   }
-  },
+},
 
   // Automatically refresh token when needed
 async refreshToken() {
@@ -94,7 +97,7 @@ async refreshToken() {
   }
 
   try {
-    const response = await fetch('http://192.168.6.241:8000/api/token/refresh/', {
+    const response = await fetch('http://192.168.6.251:8000/api/token/refresh/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

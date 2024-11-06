@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import productService from '../services/productService';  // Сервис для проверки продуктов
-import orderService from '../services/orderService';      // Сервис для создания заказа
+import productService from '../services/productService';
+import orderService from '../services/orderService';
 import './CreateOrder.css';
 
 const CreateOrder = () => {
@@ -12,7 +12,7 @@ const CreateOrder = () => {
     setErrorMessage('');
     setSuccessMessage('');
 
-    // Получаем штрихкоды из текста
+    // Get the barcodes from the input and clean up the data
     const barcodes = barcodeInput.split('\n').map((code) => code.trim()).filter(Boolean);
 
     if (barcodes.length === 0) {
@@ -21,17 +21,28 @@ const CreateOrder = () => {
     }
 
     try {
-      // Проверяем наличие всех штрихкодов в базе данных
+      // Check if all barcodes exist in the database
       const missingBarcodes = await productService.checkBarcodes(barcodes);
       if (missingBarcodes.length > 0) {
         setErrorMessage(`Штрихкоды отсутствуют в базе данных: ${missingBarcodes.join(', ')}`);
         return;
       }
 
-      // Создаем заказ, если все штрихкоды найдены
-      await orderService.createOrder(barcodes);
-      setSuccessMessage('Заказ успешно создан.');
-      setBarcodeInput(''); // Очищаем поле после успешного создания заказа
+      // Split barcodes into chunks of 30
+      const chunkSize = 30;
+      const barcodeChunks = [];
+      for (let i = 0; i < barcodes.length; i += chunkSize) {
+        barcodeChunks.push(barcodes.slice(i, i + chunkSize));
+      }
+
+      // Create each order for each chunk of barcodes
+      for (const [index, barcodeChunk] of barcodeChunks.entries()) {
+        await orderService.createOrder(barcodeChunk);
+        setSuccessMessage(`Часть ${index + 1} из ${barcodeChunks.length} успешно создана.`);
+      }
+
+      setSuccessMessage('Все заказы успешно созданы.');
+      setBarcodeInput(''); // Clear input after successful orders
     } catch (error) {
       console.error('Ошибка при создании заказа:', error);
       setErrorMessage('Ошибка при создании заказа. Попробуйте снова.');
@@ -41,7 +52,7 @@ const CreateOrder = () => {
   return (
     <div className="create-order-container">
       <h1>Создание заказа (суперадмин)</h1>
-      <textarea
+      <textarea ClassName="barcode-input"
         value={barcodeInput}
         onChange={(e) => setBarcodeInput(e.target.value)}
         placeholder="Введите штрихкоды, каждый на новой строке"

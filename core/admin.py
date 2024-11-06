@@ -65,11 +65,10 @@ class OrderStatusAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
     search_fields = ['name']
 
-# Admin for OrderProduct
 @admin.register(OrderProduct)
 class OrderProductAdmin(admin.ModelAdmin):
-    list_display = ['order', 'product']
-    search_fields = ['order__OrderNubmer', 'product__name']
+    list_display = ['order', 'product', 'assembled', 'assembled_date', 'accepted', 'accepted_date']
+    search_fields = ['order__OrderNumber', 'product__name']
     ordering = ['order']
 
 # Admin for Invoice

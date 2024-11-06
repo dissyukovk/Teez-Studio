@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';  // Используем NavLink вместо Link для активного состояния
+import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 
 function Sidebar({ user }) {
-  const [showLogout, setShowLogout] = useState(false); // Состояние для отображения кнопки выхода
+  const [showLogout, setShowLogout] = useState(false); 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const toggleSidebar = () => {
@@ -11,7 +11,7 @@ function Sidebar({ user }) {
   };
 
   if (!user || !user.groups) {
-    return null; // If no user or groups, don't render the sidebar
+    return null; 
   }
 
   return (
@@ -19,13 +19,11 @@ function Sidebar({ user }) {
       <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
         {isSidebarOpen ? 'Закрыть' : 'Меню'}
       </button>
-      {/* TEEZ STUDIO Logo Link */}
       <NavLink to="/" className="teez-studio-link">
         TEEZ STUDIO
       </NavLink>
-      {/* Links for user based on roles */}
+
       <ul>
-        {/* Stockman (Товаровед) Section */}
         {user.groups.includes('Товаровед') && (
           <>
             <li>
@@ -38,28 +36,28 @@ function Sidebar({ user }) {
               <NavLink to="/invoices" activeClassName="active">Накладные (товаровед)</NavLink>
             </li>
             <li>
-              <NavLink to="/orders" activeClassName="active">Заказ (товаровед)</NavLink> {/* Новый пункт */}
+              <NavLink to="/orders" activeClassName="active">Заказ (товаровед)</NavLink>
             </li>
             <li>
               <NavLink to="/print-barcode" activeClassName="active">Печать ШК</NavLink>
             </li>
           </>
         )}
-        {/* Super Admin (суперадминистратор) Section */}
+
         {user.groups.includes('Суперадминистратор') && (
-            <>
-              <li>
-                <NavLink to="/admin-products" activeClassName="active">Полная БД товаров (суперадминистратор)</NavLink>
-              </li>
-              <li>
-                <NavLink to="/create-order" activeClassName="active">Создание заказов (суперадмин)</NavLink>
-              </li>
-              <li>
-                <NavLink to="/categories" activeClassName="active">Категории</NavLink>
-              </li>
-            </>
-          )}
-        {/* Старший фотограф Section */}
+          <>
+            <li>
+              <NavLink to="/admin-products" activeClassName="active">Полная БД товаров (суперадминистратор)</NavLink>
+            </li>
+            <li>
+              <NavLink to="/create-order" activeClassName="active">Создание заказов (суперадмин)</NavLink>
+            </li>
+            <li>
+              <NavLink to="/categories" activeClassName="active">Категории</NavLink>
+            </li>
+          </>
+        )}
+
         {user.groups.includes('Старший фотограф') && (
           <>
             <li>
@@ -72,12 +70,11 @@ function Sidebar({ user }) {
               <NavLink to="/requests/onshoot" activeClassName="active">На съемке</NavLink>
             </li>
             <li>
-              <NavLink to="/photographer-stats">Статистика фотографов</NavLink> {/* Новая ссылка */}
+              <NavLink to="/photographer-stats" activeClassName="active">Статистика фотографов</NavLink>
             </li>
           </>
         )}
 
-        {/* Старший ретушер Section */}
         {user.groups.includes('Старший ретушер') && (
           <>
             <li>
@@ -89,14 +86,12 @@ function Sidebar({ user }) {
             <li>
               <NavLink to="/sr/requests/inretouch" activeClassName="active">В ретуши</NavLink>
             </li>
-            <li><NavLink to="/retoucher-stats" activeClassName="active">
-              Статистика ретушеров
-              </NavLink>
-              </li>
+            <li>
+              <NavLink to="/retoucher-stats" activeClassName="active">Статистика ретушеров</NavLink>
+            </li>
           </>
         )}
 
-        {/* Фотограф Section */}
         {user.groups.includes('Фотограф') && (
           <>
             <li>
@@ -104,51 +99,60 @@ function Sidebar({ user }) {
             </li>
           </>
         )}
-        {/* Ретушер Section */}
-          {user.groups.includes('Ретушер') && (
-            <>
-              <li>
-                <NavLink to="/requests/retoucher" activeClassName="active">Заявки на ретушь (ретушер)</NavLink>
-              </li>
-            </>
-          )}
-          {/* Warehouse Section */}
-            {user.groups.includes('warehouse') && (
-              <>
-              <li>
-                <NavLink to="/current-products-fs" activeClassName="active">
-                  Текущие товары на фс
-                </NavLink>
-              </li>
-              <li><NavLink to="/barcode-history">История по штрихкоду</NavLink></li>
-              </>
-              
-            )}
-        {/* Менеджер Section */}
+
+        {user.groups.includes('Ретушер') && (
+          <>
+            <li>
+              <NavLink to="/requests/retoucher" activeClassName="active">Заявки на ретушь (ретушер)</NavLink>
+            </li>
+          </>
+        )}
+
+        {user.groups.includes('warehouse') && (
+          <>
+            <li>
+              <NavLink to="/current-products-fs" activeClassName="active">Текущие товары на фс</NavLink>
+            </li>
+            <li>
+              <NavLink to="/barcode-history" activeClassName="active">История по штрихкоду</NavLink>
+            </li>
+          </>
+        )}
+
         {user.groups.includes('Менеджер') && (
           <>
             <li>
               <NavLink to="/requests/manager" activeClassName="active">Заявки (менеджер)</NavLink>
             </li>
-            <li><NavLink to="/products-manager" activeClassName="active">Список товаров (менеджер)</NavLink></li>
-            <li><NavLink to="/manager-product-stats" activeClassName="active">Статистика товароведов (менеджер)</NavLink></li>
             <li>
-              <NavLink to="/photographer-stats">Статистика фотографов</NavLink> {/* Новая ссылка */}
-            </li>
-            <li><NavLink to="/retoucher-stats" activeClassName="active">
-              Статистика ретушеров
-            </NavLink>
+              <NavLink to="/products-manager" activeClassName="active">Список товаров (менеджер)</NavLink>
             </li>
             <li>
-              <NavLink to="/orders" activeClassName="active">Заказы</NavLink> {/* Новый пункт */}
+              <NavLink to="/manager-product-stats" activeClassName="active">Статистика товароведов (менеджер)</NavLink>
+            </li>
+            <li>
+              <NavLink to="/photographer-stats" activeClassName="active">Статистика фотографов</NavLink>
+            </li>
+            <li>
+              <NavLink to="/retoucher-stats" activeClassName="active">Статистика ретушеров</NavLink>
+            </li>
+            <li>
+              <NavLink to="/orders" activeClassName="active">Заказы</NavLink>
             </li>
             <li>
               <NavLink to="/create-order" activeClassName="active">Создание заказов</NavLink>
             </li>
           </>
         )}
+
+        {/* OKЗ Section */}
+        {user.groups.includes('ОКЗ') && (
+          <li>
+            <NavLink to="/okz_list" activeClassName="active">Заказы ФС</NavLink>
+          </li>
+        )}
       </ul>
-      {/* User Info at the bottom */}
+
       <div className="user-info" onClick={() => setShowLogout(!showLogout)}>
         <div className="user-name">
           {user.first_name} {user.last_name}
@@ -156,7 +160,7 @@ function Sidebar({ user }) {
         {showLogout && (
           <div className="logout-button" onClick={() => {
             localStorage.removeItem('token');
-            window.location.href = '/login'; // Logout and redirect to login
+            window.location.href = '/login';
           }}>
             Выйти
           </div>

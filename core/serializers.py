@@ -161,14 +161,21 @@ class OrderStatusSerializer(serializers.ModelSerializer):
         model = OrderStatus
         fields = ['id', 'name']  # Укажите необходимые поля
 
+class OrderProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderProduct
+        fields = ['order', 'product', 'assembled', 'assembled_date', 'accepted', 'accepted_date']
+
 class OrderSerializer(serializers.ModelSerializer):
-    creator = UserSerializer()  # Включаем полный сериализатор для пользователя
-    status = OrderStatusSerializer()  # Включаем полный сериализатор для статуса заказа
+    creator = UserSerializer()  # Include full serializer for the creator
+    status = OrderStatusSerializer()  # Include full serializer for the status
+    assembly_user = UserSerializer()
     total_products = serializers.SerializerMethodField()
+    products = OrderProductSerializer(many=True, source='orderproduct_set')  # Include related products
 
     class Meta:
         model = Order
-        fields = ['OrderNumber', 'date', 'status', 'creator', 'total_products']
+        fields = ['OrderNumber', 'date', 'status', 'creator', 'total_products', 'products', 'assembly_user', 'assembly_date']
 
     def get_total_products(self, obj):
         return OrderProduct.objects.filter(order=obj).count()

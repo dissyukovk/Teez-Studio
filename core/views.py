@@ -817,7 +817,9 @@ def order_list(request):
     # Фильтрация по статусу
     status_id = request.query_params.get('status', None)
     if status_id:
-        orders = orders.filter(status_id=status_id)
+        # Split the status_id string by comma and convert to a list of integers
+        status_ids = [int(s) for s in status_id.split(',') if s.isdigit()]
+        orders = orders.filter(status_id__in=status_ids)
 
     # Фильтрация по дате заказа
     date_from = request.query_params.get('date_from', None)
@@ -865,7 +867,7 @@ def request_details(request, request_number):
                 'category_name': bp.product.category.name if bp.product.category else 'N/A',  # Проверяем наличие категории
                 'category_reference_link': bp.product.category.reference_link if bp.product.category else 'N/A',  # Проверяем наличие ссылки
                 'retouch_status_name': bp.retouch_status.name if bp.retouch_status else 'N/A',  # Статус ретуши из strequestproduct
-                'retouch_link': bp.product.retouch_link if bp.product.retouch_link else 'N/A'  # Ссылка на обработанные фото из Product
+                'retouch_link': bp.product.retouch_link if bp.product.retouch_link else ''  # Ссылка на обработанные фото из Product
             }
             for bp in barcodes
         ]
@@ -1158,6 +1160,10 @@ def order_details(request, orderNumber):
                 'barcode': order_product.product.barcode,
                 'name': order_product.product.name,
                 'movementStatus': order_product.product.move_status.name if order_product.product.move_status else 'Не указан',  # Проверка на None
+                'cell': order_product.product.cell if order_product.product.cell else 'Не указана',  # Добавляем ячейку
+                'assembled': order_product.assembled,
+                'assembled_date': order_product.assembled_date,
+                'accepted': order_product.accepted
             }
             for order_product in order_products
         ]
@@ -1179,8 +1185,7 @@ def order_details(request, orderNumber):
         return Response(response_data)
     except Order.DoesNotExist:
         return Response({'error': 'Order not found'}, status=404)
-
-
+    
 @api_view(['PATCH'])
 def update_order_status(request, orderNumber):
     try:
@@ -1773,3 +1778,77 @@ class ReadyPhotosView(APIView):
         ]
 
         return paginator.get_paginated_response(data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_assembly(request, order_number):
+    print(f"Order Number received: {order_number}")
+    user_id = request.data.get('user_id')
+    user = get_object_or_404(User, id=user_id)
+    order = get_object_or_404(Order, OrderNumber=order_number)
+
+    order.assembly_user = user
+    order.assembly_date = timezone.now()
+    order.status_id = 3  # Set status to 3 for assembly started
+    order.save()
+
+    return Response({'message': 'Assembly started and user assigned'}, status=200)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def assemble_product(request, order_number, product_barcode):
+    order = get_object_or_404(Order, OrderNumber=order_number)
+    try:
+        order_product = OrderProduct.objects.get(order=order, product__barcode=product_barcode)
+        order_product.assembled = True
+        order_product.assembled_date = timezone.now()
+        order_product.save()
+        return Response({'message': 'Товар успешно добавлен'}, status=200)
+    except OrderProduct.DoesNotExist:
+        return Response({'error': 'Этого ШК нет в данном заказе'}, status=404)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_acceptance(request, order_number):
+    user_id = request.data.get('user_id')
+    user = get_object_or_404(User, id=user_id)
+    order = get_object_or_404(Order, OrderNumber=order_number)
+
+    order.accept_user = user
+    order.accept_date = timezone.now()
+    order.status_id = 4  # Set status to 4 for acceptance started
+    order.save()
+
+    return Response({'message': 'Acceptance started and user assigned'}, status=200)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def accept_order_products(request, order_number):
+    barcodes = request.data.get('barcodes', [])
+    order = get_object_or_404(Order, OrderNumber=order_number)
+    not_found_barcodes = []
+
+    for barcode in barcodes:
+        try:
+            order_product = OrderProduct.objects.get(order=order, product__barcode=barcode)
+            order_product.accepted = True
+            order_product.accepted_date = timezone.now()
+            order_product.save()
+        except OrderProduct.DoesNotExist:
+            not_found_barcodes.append(barcode)
+
+    if not_found_barcodes:
+        return Response({
+            'message': 'Часть товаров приняты, непринятые:',
+            'missing_barcodes': not_found_barcodes
+        }, status=207)
+
+    return Response({'message': 'Все товары успешно приняты'}, status=200)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_order_status(request, order_number, new_status):
+    order = get_object_or_404(Order, OrderNumber=order_number)
+    order.status_id = new_status
+    order.save()
+    return Response({'message': f'Статус заказа обновлен на {new_status}'}, status=200)

@@ -1,0 +1,135 @@
+/* Responsive styles for okz_OrderView.css */
+
+.order-view {
+    padding: 20px;
+    margin-left: 50px;
+}
+
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.order-status {
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.order-status span {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.status-button {
+    padding: 8px 16px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.status-button:hover {
+    background-color: #218838;
+}
+
+.back-button {
+    background-color: #007bff;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.back-button:hover {
+    background-color: #0056b3;
+}
+
+.barcode-input {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px;
+    font-size: 16px;
+    margin-top: 10px;
+    height: 20px;
+}
+
+.barcode-input-hidden {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.order-products-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.order-products-table th, .order-products-table td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.order-products-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.order-products-table td.accepted {
+    color: green;
+    font-weight: bold;
+}
+
+.order-products-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .order-view {
+        margin-left: 0;
+        padding: 10px;
+    }
+
+    .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .order-status {
+        font-size: 16px;
+    }
+
+    .status-button,
+    .back-button {
+        width: 100%;
+        font-size: 12px;
+        margin: 10px 0;
+    }
+
+    .barcode-input {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .order-products-table th, .order-products-table td {
+        padding: 5px;
+        font-size: 9px;
+    }
+}

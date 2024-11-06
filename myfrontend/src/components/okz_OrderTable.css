@@ -1,0 +1,120 @@
+/* Основные стили */
+.main-content {
+  padding: 20px;
+}
+
+.table-container {
+  margin: 0 auto;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.products-table th, .products-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.products-table th {
+  cursor: pointer;
+}
+
+.search-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.search-container input {
+  padding: 6px;
+  font-size: 12px;
+  flex: 1 1 40px; /* Минимальная ширина 40px для компактного вида */
+  max-width: 200px; /* Ограничение ширины для избежания переполнения */
+}
+
+.search-container button {
+  padding: 1px 18px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+/* Стили для пагинации */
+.pagination-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.pagination-container button {
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Адаптивные стили для устройств с шириной экрана меньше 768px */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 10px;
+  }
+
+  .products-table th, .products-table td {
+    padding: 6px;
+    font-size: 12px;
+  }
+
+  .search-container input, .search-container button {
+    font-size: 12px;
+    padding: 6px;
+    max-width: 100%;
+  }
+
+  .pagination-container button {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+  
+  .main-content h1 {
+    font-size: 1.5em;
+    text-align: center;
+  }
+}
+
+/* Адаптивные стили для устройств с шириной экрана меньше 480px */
+@media (max-width: 480px) {
+  .products-table th, .products-table td {
+    font-size: 10px;
+  }
+
+  .search-container {
+    flex-direction: column; /* Ставим поля поиска в колонку */
+  }
+
+  .search-container input {
+    width: 100%;
+    box-sizing: border-box; /* Убедимся, что padding не выходит за рамки */
+  }
+
+  .pagination-container {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .pagination-container span {
+    font-size: 12px;
+  }
+
+  .search-container button {
+    width: 100%; /* Полная ширина для кнопки поиска */
+  }
+}

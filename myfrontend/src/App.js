@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import ProductTable from './components/ProductTable';
@@ -32,17 +32,33 @@ import PhDistributeRequests from './pages/PhDistributeRequests';
 import PhCheckRequests from './pages/PhCheckRequests';
 import PhOnShootRequests from './pages/PhOnShootRequests';
 import AutoUploadTest from './pages/AutoUploadTest';
+import OkzOrderTable from './components/okz_OrderTable';
+import OkzOrderView from './pages/okz_OrderView';
+import FsOrderTable from './components/fs_OrderTable';
+import FsOrderView from './pages/fs_OrderView';
 
 const AppContent = ({ isAuthenticated, user }) => {
   const location = useLocation();
 
-  // Define routes that should not display the sidebar
-  const noSidebarRoutes = ['/defect', '/ready-photos', '/current-products-fs', '/barcode-history'];
-  const showSidebar = isAuthenticated && !noSidebarRoutes.includes(location.pathname);
+  // Проверка на перенаправление для пользователей группы "OKЗ"
+  if (isAuthenticated && user?.groups?.includes("OKЗ") && location.pathname === "/") {
+    return <Navigate to="/okz_orders" />;
+  }
+
+  // Определяем маршруты, где не нужно отображать боковую панель
+  const noSidebarRoutes = ['/defect', '/ready-photos', '/current-products-fs', '/barcode-history', '/okz_orders', '/okz_orders/:orderNumber'];
+
+  // Функция для проверки, нужен ли сайдбар на текущем пути
+  const shouldShowSidebar = () => {
+    return isAuthenticated && !noSidebarRoutes.some(route => {
+      const regex = new RegExp(`^${route.replace(':orderNumber', '[^/]+')}$`);
+      return regex.test(location.pathname);
+    });
+  };
 
   return (
     <div className="app">
-      {showSidebar && <Sidebar user={user} />}
+      {shouldShowSidebar() && <Sidebar user={user} />}
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
         <Route path="/" element={isAuthenticated ? <HomePage user={user} /> : <Navigate to="/login" />} />
@@ -74,10 +90,15 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/manager-product-stats" element={<ManagerProductStats />} />
         <Route path="/ready-photos" element={<ReadyPhotos />} />
         <Route path="/upload-test" element={<AutoUploadTest />} />
+        <Route path="/okz_list" element={isAuthenticated ? <OkzOrderTable /> : <Navigate to="/login" />} />
+        <Route path="/okz_orders/:orderNumber" element={isAuthenticated ? <OkzOrderView /> : <Navigate to="/login" />} />
+        <Route path="/fs_list" element={isAuthenticated ? <FsOrderTable /> : <Navigate to="/login" />} />
+        <Route path="/fs_orders/:orderNumber" element={isAuthenticated ? <FsOrderView /> : <Navigate to="/login" />} />
       </Routes>
     </div>
-  );
+  );  
 };
+
 
 const App = () => {
   const [user, setUser] = useState(null);

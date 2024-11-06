@@ -16,7 +16,7 @@ const ManagerProductStats = () => {
   useEffect(() => {
     // Fetch stockman list on component mount
     axios
-      .get('http://192.168.6.241:8000/api/stockman-list/', getAuthHeaders())
+      .get('http://192.168.6.251:8000/api/stockman-list/', getAuthHeaders())
       .then(response => setStockmen(response.data))
       .catch(error => console.error('Error fetching stockman list:', error));
   }, []);
@@ -24,7 +24,7 @@ const ManagerProductStats = () => {
   const fetchStats = async (date) => {
     setLoading(true);
     try {
-      const response = await axios.get('http://192.168.6.241:8000/api/manager-product-stats/', {
+      const response = await axios.get('http://192.168.6.251:8000/api/manager-product-stats/', {
         params: { date },
         ...getAuthHeaders(),
       });
