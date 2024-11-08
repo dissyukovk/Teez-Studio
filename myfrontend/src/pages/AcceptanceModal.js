@@ -100,10 +100,13 @@ const AcceptanceModal = ({ orderNumber, products, closeModal }) => {
       } else {
         // Step 3: Create a request
         const requestResponse = await productService.createRequest(barcodesToCreate);
+  
         if (requestResponse && requestResponse.requestNumber) {
-          // Step 4: Update product status to "Accepted" with user and date in the productService
+          // Step 4: Update product status to "Accepted" with user and date
           await productService.updateProductStatusIncome(barcodesToCreate, userId, 3);
-          alert('Заявка создана и товары приняты.');
+  
+          // Open the newly created request in a new tab
+          window.open(`/fs_stockman_requestview/${requestResponse.requestNumber}`, '_blank');
         } else {
           throw new Error("Ошибка при создании заявки.");
         }
@@ -118,35 +121,38 @@ const AcceptanceModal = ({ orderNumber, products, closeModal }) => {
   };  
 
   return (
-    <div className="acceptance-modal">
-      <h2>Приемка заказа №{orderNumber}</h2>
-      <p>Сканируйте штрихкоды для приемки</p>
-      <table className="scanned-table">
-        <thead>
-          <tr>
-            <th>Штрихкод</th>
-            <th>Наименование</th>
-            <th>Удалить</th>
-          </tr>
-        </thead>
-        <tbody>
-          {scannedBarcodes.map((item) => (
-            <tr key={item.barcode}>
-              <td>{item.barcode}</td>
-              <td>{item.name}</td>
-              <td>
-                <button onClick={() => handleDeleteBarcode(item.barcode)}>Удалить</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="modal-buttons">
-        <button onClick={handleCreateRequest}>Создать заявку</button>
-        <button onClick={handleAccept}>Принять</button>
-        <button onClick={closeModal}>Закрыть</button>
-      </div>
-    </div>
+        <div className="acceptance-modal">
+          <h2>Приемка заказа №{orderNumber}</h2>
+          <p>Сканируйте штрихкоды для приемки</p>
+          <div className="scanned-table-container">
+            <table className="scanned-table">
+              <thead>
+                <tr>
+                  <th>Штрихкод</th>
+                  <th>Наименование</th>
+                  <th>Удалить</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scannedBarcodes.map((item) => (
+                  <tr key={item.barcode}>
+                    <td>{item.barcode}</td>
+                    <td>{item.name}</td>
+                    <td>
+                      <button onClick={() => handleDeleteBarcode(item.barcode)}>Удалить</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="modal-buttons">
+            <button onClick={handleCreateRequest}>Создать заявку</button>
+            <button onClick={handleAccept}>Принять</button>
+            <button onClick={closeModal}>Закрыть</button>
+          </div>
+        </div>
+
   );
 };
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import orderService from '../services/orderService';
 import './ProductTable.css';
 
@@ -14,9 +15,10 @@ const OrderTable = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
+  
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch statuses on mount
     orderService.getOrderStatuses()
       .then(setStatuses)
       .catch((err) => console.error("Error loading statuses:", err));
@@ -26,33 +28,28 @@ const OrderTable = () => {
     try {
       setLoading(true);
       const response = await orderService.getOrders(searchOrderNumber, searchBarcode, selectedStatus, sortField, sortOrder, page);
-      if (response && response.results) {
-        setOrders(response.results);
-        setTotalPages(Math.ceil(response.count / 100));
-      } else {
-        setOrders([]);
-      }
+
+      setOrders(response.results || []);
+      setTotalPages(Math.ceil(response.count / 100));
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching orders:', error);
       setError('Не удалось загрузить заказы');
       setLoading(false);
     }
-  }, [searchOrderNumber, searchBarcode, selectedStatus, sortField, sortOrder]);  
+  }, [searchOrderNumber, searchBarcode, selectedStatus, sortField, sortOrder]);
 
   useEffect(() => {
     fetchOrders(currentPage);
   }, [currentPage, fetchOrders]);
 
   const handleSort = (field) => {
-    const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     setSortField(field);
-    setSortOrder(newSortOrder);
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
-  const openOrderDetails = (orderNumber) => {
-    window.open(`/orders/${orderNumber}`, '_blank');
-  };  
+  const goToOrderDetails = (orderNumber) => {
+    navigate(`/order_view/${orderNumber}`);
+  };
 
   return (
     <div className="main-content">
@@ -86,36 +83,45 @@ const OrderTable = () => {
       {loading && <div>Загрузка...</div>}
       {error && <div>{error}</div>}
       <div className="table-container">
-        <table className="products-table">
+        <table className="orders-table">
           <thead>
             <tr>
               <th onClick={() => handleSort('OrderNumber')}>Номер заказа</th>
-              <th onClick={() => handleSort('date')}>Дата</th>
-              <th>Создатель</th>
-              <th>Статус</th>
-              <th>Количество товаров</th>
+              <th onClick={() => handleSort('date')}>Дата создания</th>
+              <th onClick={() => handleSort('creator')}>Создатель</th>
+              <th onClick={() => handleSort('assembly_user')}>Сотрудник сборки</th>
+              <th onClick={() => handleSort('accept_user')}>Сотрудник приемки</th>
+              <th onClick={() => handleSort('accept_date')}>Дата приемки</th>
+              <th onClick={() => handleSort('status')}>Статус</th>
+              <th>Количество товаров (собрано/общее)</th>
+              <th>Принято</th>
             </tr>
           </thead>
           <tbody>
-            {orders && orders.length > 0 ? (
+            {orders.length > 0 ? (
               orders.map((order) => (
                 <tr key={order.OrderNumber}>
-                  <td onClick={() => openOrderDetails(order.OrderNumber)} style={{ cursor: 'pointer', color: 'blue' }}>{order.OrderNumber}</td>
+                  <td onClick={() => goToOrderDetails(order.OrderNumber)} style={{ cursor: 'pointer', color: 'blue' }}>
+                    {order.OrderNumber}
+                  </td>
                   <td>{order.date ? new Date(order.date).toLocaleString() : 'Нет даты'}</td>
                   <td>{order.creator ? `${order.creator.first_name} ${order.creator.last_name}` : 'Не указан'}</td>
+                  <td>{order.assembly_user ? `${order.assembly_user.first_name} ${order.assembly_user.last_name}` : 'Не указан'}</td>
+                  <td>{order.accept_user ? `${order.accept_user.first_name} ${order.accept_user.last_name}` : 'Не указан'}</td>
+                  <td>{order.accept_date ? new Date(order.accept_date).toLocaleString() : 'Нет даты'}</td>
                   <td>{order.status ? order.status.name : 'Не указан'}</td>
-                  <td>{order.total_products}</td>
+                  <td>{order.assembled_count}/{order.total_products}</td>
+                  <td>{order.accepted_count}/{order.assembled_count}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5">Заказы не найдены</td>
+                <td colSpan="9">Заказы не найдены</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-
       <div className="pagination-container">
         <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>Первая</button>
         <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>Предыдущая</button>

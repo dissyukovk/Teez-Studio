@@ -142,6 +142,9 @@ function Sidebar({ user }) {
             <li>
               <NavLink to="/create-order" activeClassName="active">Создание заказов</NavLink>
             </li>
+            <li>
+              <NavLink to="/invoices" activeClassName="active">Накладные (Отправка)</NavLink>
+            </li>
           </>
         )}
 

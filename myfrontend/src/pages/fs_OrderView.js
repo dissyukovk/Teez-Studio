@@ -35,13 +35,26 @@ const FsOrderView = () => {
         return;
       }
 
-      await orderService.startAcceptance(orderNumber, userId); // Call the backend to start acceptance
-      setShowModal(true); // Show the modal after starting acceptance
+      await orderService.startAcceptance(orderNumber, userId);
+      setShowModal(true);
     } catch (error) {
       console.error('Error starting acceptance:', error);
       alert('Ошибка при начале приемки');
     }
   };
+
+  const completeAcceptance = async () => {
+    try {
+      await orderService.checkOrderStatus(orderNumber);
+      navigate('/fs_list'); // Переход на /fs_list при успешном завершении
+    } catch (error) {
+      console.error('Ошибка при завершении приемки:', error);
+      alert('Ошибка при завершении приемки');
+    }
+  };
+
+  // Проверка, что все `assembled` и `accepted` совпадают
+  const allProductsMatch = order?.products?.every(product => product.assembled === product.accepted);
 
   if (loading) return <div>Загрузка...</div>;
   if (error) return <div>{error}</div>;
@@ -53,8 +66,7 @@ const FsOrderView = () => {
         <h1>Детали заказа {orderNumber}</h1>
         <div className="order-status">
           <span>Статус: {order?.status?.name || 'Не указан'}</span>
-            <button onClick={startAcceptance} className="status-button">Начать приемку</button>
-
+          <button onClick={startAcceptance} className="status-button">Начать приемку</button>
         </div>
       </div>
       <div className="table-wrapper">
@@ -69,19 +81,22 @@ const FsOrderView = () => {
             </tr>
           </thead>
           <tbody>
-            {order?.products?.map((product) => (
-              <tr key={product.barcode}>
-                <td>{product.barcode}</td>
-                <td>{product.name}</td>
-                <td style={{ color: product.assembled ? 'green' : 'red' }}>
-                  {product.assembled ? 'Собран' : 'Не собран'}
-                </td>
-                <td>{product.assembled_date ? new Date(product.assembled_date).toLocaleString() : ""}</td>
-                <td style={{ color: product.accepted ? 'green' : 'red' }}>
-                  {product.accepted ? 'Принят' : 'Не принят'}
-                </td>
-              </tr>
-            ))}
+            {order?.products?.map((product) => {
+              const barcodeStyle = product.assembled === product.accepted ? {} : { color: 'red' };
+              return (
+                <tr key={product.barcode}>
+                  <td style={barcodeStyle}>{product.barcode}</td>
+                  <td>{product.name}</td>
+                  <td style={{ color: product.assembled ? 'green' : 'red' }}>
+                    {product.assembled ? 'Собран' : 'Не собран'}
+                  </td>
+                  <td>{product.assembled_date ? new Date(product.assembled_date).toLocaleString() : ""}</td>
+                  <td style={{ color: product.accepted ? 'green' : 'red' }}>
+                    {product.accepted ? 'Принят' : 'Не принят'}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -93,6 +108,14 @@ const FsOrderView = () => {
           products={order.products}
           closeModal={() => setShowModal(false)}
         />
+      )}
+      <br></br>
+      {/* Button to complete acceptance - only show if all products match */}
+      {allProductsMatch && (
+        <button onClick={completeAcceptance} className="complete-button">
+          
+          Завершить приемку
+        </button>
       )}
     </div>
   );

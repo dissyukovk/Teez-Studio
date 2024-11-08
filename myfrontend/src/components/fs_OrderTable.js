@@ -19,7 +19,16 @@ const FsOrderTable = () => {
     try {
       setLoading(true);
       const response = await orderService.getOrders(searchOrderNumber, searchBarcode, '3,4,5,6', sortField, sortOrder, page);
-      setOrders(response.results || []);
+
+      // Add assembled count to each order
+      const enrichedOrders = response.results.map(order => ({
+        ...order,
+        assembledCount: order.products.filter(product => product.assembled).length,
+        acceptedCount: order.products.filter(product => product.accepted).length,
+        totalProducts: order.products.length,
+      }));
+
+      setOrders(enrichedOrders || []);
       setTotalPages(Math.ceil(response.count / 100));
       setLoading(false);
     } catch (error) {
@@ -43,7 +52,7 @@ const FsOrderTable = () => {
 
   return (
     <div className="main-content">
-      <h1>Список заказов OKZ</h1>
+      <h1>Список заказов ОКЗ для ФС</h1>
       <div className="search-container">
         <input type="text" placeholder="Поиск по номеру заказа" value={searchOrderNumber} onChange={(e) => setSearchOrderNumber(e.target.value)} />
         <input type="text" placeholder="Поиск по штрихкоду" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
@@ -62,6 +71,7 @@ const FsOrderTable = () => {
               <th>Начало сборки</th>
               <th>Статус</th>
               <th>Количество товаров</th>
+              <th>Принято</th>
             </tr>
           </thead>
           <tbody>
@@ -74,7 +84,8 @@ const FsOrderTable = () => {
                   <td>{order.assembly_user ? `${order.assembly_user.first_name} ${order.assembly_user.last_name}` : 'Не указан'}</td>
                   <td>{order.assembly_date ? new Date(order.assembly_date).toLocaleString() : 'Не начато'}</td>
                   <td>{order.status ? order.status.name : 'Не указан'}</td>
-                  <td>{order.total_products}</td>
+                  <td>{order.assembledCount}/{order.totalProducts}</td>
+                  <td>{order.acceptedCount}</td>
                 </tr>
               ))
             ) : (

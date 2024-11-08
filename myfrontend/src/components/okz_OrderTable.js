@@ -13,13 +13,24 @@ const OkzOrderTable = () => {
   const [searchBarcode, setSearchBarcode] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
+  
+  // Local state for holding search inputs until the search button is clicked
+  const [searchInputOrderNumber, setSearchInputOrderNumber] = useState('');
+  const [searchInputBarcode, setSearchInputBarcode] = useState('');
 
-  // Fetch orders with statuses 2 and 3
+  // Fetch orders with specified filters and pagination
   const fetchOrders = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const response = await orderService.getOrders(searchOrderNumber, searchBarcode, '2,3', sortField, sortOrder, page);
-      setOrders(response.results || []);
+
+      const enrichedOrders = response.results.map(order => ({
+        ...order,
+        assembledCount: order.products.filter(product => product.assembled).length,
+        totalProducts: order.products.length,
+      }));
+
+      setOrders(enrichedOrders || []);
       setTotalPages(Math.ceil(response.count / 100));
       setLoading(false);
     } catch (error) {
@@ -28,13 +39,20 @@ const OkzOrderTable = () => {
     }
   }, [searchOrderNumber, searchBarcode, sortField, sortOrder]);
 
+  // Run fetchOrders when currentPage, searchOrderNumber, or searchBarcode changes
   useEffect(() => {
     fetchOrders(currentPage);
-  }, [currentPage, fetchOrders]);
+  }, [currentPage, searchOrderNumber, searchBarcode, fetchOrders]);
 
   const handleSort = (field) => {
     setSortField(field);
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
+
+  const handleSearch = () => {
+    setSearchOrderNumber(searchInputOrderNumber);
+    setSearchBarcode(searchInputBarcode);
+    setCurrentPage(1); // Reset to first page on new search
   };
 
   const openOrderDetails = (orderNumber) => {
@@ -43,11 +61,21 @@ const OkzOrderTable = () => {
 
   return (
     <div className="main-content">
-      <h1>Список заказов OKZ</h1>
+      <h1>Список заказов ОКЗ</h1>
       <div className="search-container">
-        <input type="text" placeholder="Поиск по номеру заказа" value={searchOrderNumber} onChange={(e) => setSearchOrderNumber(e.target.value)} />
-        <input type="text" placeholder="Поиск по штрихкоду" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
-        <button onClick={() => fetchOrders(1)}>Поиск</button>
+        <input
+          type="text"
+          placeholder="Поиск по номеру заказа"
+          value={searchInputOrderNumber}
+          onChange={(e) => setSearchInputOrderNumber(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Поиск по штрихкоду"
+          value={searchInputBarcode}
+          onChange={(e) => setSearchInputBarcode(e.target.value)}
+        />
+        <button onClick={handleSearch}>Поиск</button>
       </div>
       {loading && <div>Загрузка...</div>}
       {error && <div>{error}</div>}
@@ -74,11 +102,11 @@ const OkzOrderTable = () => {
                   <td>{order.assembly_user ? `${order.assembly_user.first_name} ${order.assembly_user.last_name}` : 'Не указан'}</td>
                   <td>{order.assembly_date ? new Date(order.assembly_date).toLocaleString() : 'Не начато'}</td>
                   <td>{order.status ? order.status.name : 'Не указан'}</td>
-                  <td>{order.total_products}</td>
+                  <td>{order.assembledCount}/{order.totalProducts}</td>
                 </tr>
               ))
             ) : (
-              <tr><td colSpan="6">Заказы не найдены</td></tr>
+              <tr><td colSpan="7">Заказы не найдены</td></tr>
             )}
           </tbody>
         </table>

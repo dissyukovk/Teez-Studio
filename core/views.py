@@ -799,58 +799,42 @@ def finalize_request(request):
     return Response({'message': 'Заявка успешно завершена'})
 
 
-# Фильтрация для Order
 @api_view(['GET'])
 def order_list(request):
     orders = Order.objects.all()
 
-    # Фильтрация по номеру заказа
+    # Filtering by order number
     order_number = request.query_params.get('OrderNumber', None)
     if order_number:
         orders = orders.filter(OrderNumber__icontains=order_number)
 
-    # Фильтрация по штрихкоду товара
+    # Filtering by product barcode
     barcode = request.query_params.get('barcode', None)
     if barcode:
         orders = orders.filter(orderproduct__product__barcode__icontains=barcode)
 
-    # Фильтрация по статусу
+    # Filtering by status
     status_id = request.query_params.get('status', None)
     if status_id:
-        # Split the status_id string by comma and convert to a list of integers
         status_ids = [int(s) for s in status_id.split(',') if s.isdigit()]
         orders = orders.filter(status_id__in=status_ids)
 
-    # Фильтрация по дате заказа
-    date_from = request.query_params.get('date_from', None)
-    date_to = request.query_params.get('date_to', None)
-    if date_from and date_to:
-        orders = orders.filter(date__range=[date_from, date_to])
-    elif date_from:
-        orders = orders.filter(date__gte=date_from)
-    elif date_to:
-        orders = orders.filter(date__lte=date_to)
-
-    # Сортировка
+    # Sorting
     sort_field = request.query_params.get('sort_field', 'OrderNumber')
     sort_order = request.query_params.get('sort_order', 'asc')
-
     if sort_field:
         if sort_order == 'desc':
             sort_field = f'-{sort_field}'
         orders = orders.order_by(sort_field)
 
-    # Пагинация
+    # Pagination
     paginator = ProductPagination()
     paginated_orders = paginator.paginate_queryset(orders, request)
 
-    # Вычисление количества товаров в заказе
-    for order in paginated_orders:
-        order.total_products = OrderProduct.objects.filter(order=order).count()
-
-    # Сериализация
+    # Serializing the paginated orders
     serializer = OrderSerializer(paginated_orders, many=True)
     return paginator.get_paginated_response(serializer.data)
+
 
 @api_view(['GET'])
 def request_details(request, request_number):
@@ -1150,25 +1134,26 @@ def get_order_statuses(request):
 @api_view(['GET'])
 def order_details(request, orderNumber):
     try:
-        # Получаем заказ по номеру
+        # Retrieve order by order number
         order = Order.objects.get(OrderNumber=orderNumber)
         
-        # Получаем продукты, связанные с заказом
+        # Get products associated with the order
         order_products = OrderProduct.objects.filter(order=order).select_related('product')
         products_data = [
             {
                 'barcode': order_product.product.barcode,
                 'name': order_product.product.name,
-                'movementStatus': order_product.product.move_status.name if order_product.product.move_status else 'Не указан',  # Проверка на None
-                'cell': order_product.product.cell if order_product.product.cell else 'Не указана',  # Добавляем ячейку
+                'movementStatus': order_product.product.move_status.name if order_product.product.move_status else 'Не указан',
+                'cell': order_product.product.cell if order_product.product.cell else 'Не указана',
                 'assembled': order_product.assembled,
                 'assembled_date': order_product.assembled_date,
-                'accepted': order_product.accepted
+                'accepted': order_product.accepted,
+                'accepted_date': order_product.accepted_date
             }
             for order_product in order_products
         ]
         
-        # Формируем ответ с деталями заказа и продуктами
+        # Formulate response data with order details, including the assembly user
         response_data = {
             'orderNumber': order.OrderNumber,
             'status': {
@@ -1180,6 +1165,10 @@ def order_details(request, orderNumber):
                 'first_name': order.creator.first_name,
                 'last_name': order.creator.last_name
             } if order.creator else None,
+            'assembly_user': {
+                'first_name': order.assembly_user.first_name,
+                'last_name': order.assembly_user.last_name
+            } if order.assembly_user else None  # Check if assembly_user exists
         }
         
         return Response(response_data)
@@ -1852,3 +1841,24 @@ def update_order_status(request, order_number, new_status):
     order.status_id = new_status
     order.save()
     return Response({'message': f'Статус заказа обновлен на {new_status}'}, status=200)
+
+@api_view(['GET'])
+def check_order_status(request, order_number):
+    try:
+        order = Order.objects.get(OrderNumber=order_number)
+        order_products = OrderProduct.objects.filter(order=order)
+
+        # Проверяем, совпадают ли assembled и accepted для каждого продукта
+        all_match = all(product.assembled == product.accepted for product in order_products)
+
+        # Если у всех продуктов `assembled` и `accepted` совпадают
+        if all_match:
+            order.status_id = 5  # Устанавливаем статус "5" если все продукты совпадают по `assembled` и `accepted`
+        else:
+            order.status_id = 6  # Устанавливаем статус "6" если есть хотя бы одно расхождение
+
+        order.save()
+        return Response({'message': f'Order status updated to {order.status_id}'}, status=200)
+        
+    except Order.DoesNotExist:
+        return Response({'error': 'Order not found'}, status=404)

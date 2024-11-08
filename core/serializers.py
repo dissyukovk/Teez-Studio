@@ -170,15 +170,24 @@ class OrderSerializer(serializers.ModelSerializer):
     creator = UserSerializer()  # Include full serializer for the creator
     status = OrderStatusSerializer()  # Include full serializer for the status
     assembly_user = UserSerializer()
+    accept_user = UserSerializer()
     total_products = serializers.SerializerMethodField()
     products = OrderProductSerializer(many=True, source='orderproduct_set')  # Include related products
+    assembled_count = serializers.SerializerMethodField()
+    accepted_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ['OrderNumber', 'date', 'status', 'creator', 'total_products', 'products', 'assembly_user', 'assembly_date']
+        fields = ['OrderNumber', 'date', 'status', 'creator', 'total_products', 'products', 'assembly_user', 'assembly_date', 'accept_user', 'accept_date', 'assembled_count', 'accepted_count']
 
     def get_total_products(self, obj):
         return OrderProduct.objects.filter(order=obj).count()
+
+    def get_assembled_count(self, obj):
+        return OrderProduct.objects.filter(order=obj, assembled=True).count()
+
+    def get_accepted_count(self, obj):
+        return OrderProduct.objects.filter(order=obj, accepted=True).count()
 
 class RetouchStatusSerializer(serializers.ModelSerializer):
     class Meta:

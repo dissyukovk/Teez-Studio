@@ -4,7 +4,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './DefectOperations.css';
 
-const API_URL = 'http://192.168.6.251:8000/public/defect-operations/';
+const API_URL = 'http://192.168.6.245:8000/public/defect-operations/';
 
 const DefectOperations = () => {
   const [operations, setOperations] = useState([]);

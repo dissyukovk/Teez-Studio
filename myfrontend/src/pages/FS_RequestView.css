@@ -1,0 +1,59 @@
+.fs-request-view {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    margin-left: 250px;
+  }
+  
+  .styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  .styled-table th,
+  .styled-table td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  
+  .styled-table th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+  }
+  
+  .styled-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
+  .styled-table tr:hover {
+    background-color: #f1f1f1;
+  }
+  
+  .styled-table td .remove-btn {
+    color: #ff4d4d;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .add-barcode {
+    margin-top: 20px;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  .save-btn, .print-btn, .status-update-btn {
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  .error-message {
+    color: red;
+    margin-top: 10px;
+  }
+  

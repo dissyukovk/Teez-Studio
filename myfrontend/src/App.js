@@ -36,6 +36,7 @@ import OkzOrderTable from './components/okz_OrderTable';
 import OkzOrderView from './pages/okz_OrderView';
 import FsOrderTable from './components/fs_OrderTable';
 import FsOrderView from './pages/fs_OrderView';
+import FSStockmanRequestView from './pages/FS_Stockman_RequestView';
 
 const AppContent = ({ isAuthenticated, user }) => {
   const location = useLocation();
@@ -68,7 +69,7 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/invoices/:invoiceNumber" element={<InvoiceView />} />
         <Route path="/admin-products" element={isAuthenticated ? <AdminProducts /> : <Navigate to="/login" />} />
         <Route path="/orders" element={isAuthenticated ? <OrderTable /> : <Navigate to="/login" />} />
-        <Route path="/orders/:orderNumber" element={isAuthenticated ? <OrderView /> : <Navigate to="/login" />} />
+        <Route path="/order_view/:orderNumber" element={isAuthenticated ? <OrderView /> : <Navigate to="/login" />} />
         <Route path="/create-order" element={<CreateOrder />} />
         <Route path="/requests/distribute" element={isAuthenticated ? <PhDistributeRequests /> : <Navigate to="/login" />} />
         <Route path="/products-manager" element={isAuthenticated ? <ProductListManager /> : <Navigate to="/login" />} />
@@ -94,6 +95,7 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/okz_orders/:orderNumber" element={isAuthenticated ? <OkzOrderView /> : <Navigate to="/login" />} />
         <Route path="/fs_list" element={isAuthenticated ? <FsOrderTable /> : <Navigate to="/login" />} />
         <Route path="/fs_orders/:orderNumber" element={isAuthenticated ? <FsOrderView /> : <Navigate to="/login" />} />
+        <Route path="/fs_stockman_requestview/:requestNumber" element={isAuthenticated ? <FSStockmanRequestView /> : <Navigate to="/login" />} />
       </Routes>
     </div>
   );  

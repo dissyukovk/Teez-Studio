@@ -83,7 +83,7 @@ class OrderStatus(models.Model):
         return self.name
 
 class Order(models.Model):
-    OrderNumber = models.CharField(max_length=13, unique=True, null=True)
+    OrderNumber = models.BigIntegerField(unique=True, null=True)
     date = models.DateTimeField(null=True, blank=True)
     creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.ForeignKey(OrderStatus, on_delete=models.SET_NULL, null=True, blank=True)

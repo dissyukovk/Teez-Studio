@@ -35,10 +35,9 @@ const AutoUploadTest = () => {
             const response = await fetch(url);
             const data = await response.json();
     
-            console.log("Ответ от Google Drive API:", data); // Для отладки
+            console.log("Ответ от Google Drive API:", data);
 
             if (response.ok && data.files) {
-                // Фильтруем папки по штрихкодам
                 const files = barcodes.map(barcode => {
                     const file = data.files.find(file => file.name === barcode);
                     return { barcode, link: file ? `https://drive.google.com/drive/folders/${file.id}` : 'Файл не найден' };

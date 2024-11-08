@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import requestService from '../services/requestService';
 import './Requests.css';
 import CreateRequestModal from './CreateRequestModal';
-import RequestModalStockman from './RequestModalStockman';
 
 const Requests = () => {
   const [requests, setRequests] = useState([]);
@@ -12,31 +12,28 @@ const Requests = () => {
   const [error, setError] = useState(null);
   const [searchRequestNumber, setSearchRequestNumber] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');  // Добавляем состояние для статуса
-  const [statuses, setStatuses] = useState([]);  // Список статусов
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [statuses, setStatuses] = useState([]);
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [showCreateRequestModal, setShowCreateRequestModal] = useState(false); // Add state for modal visibility
+  const [newRequestNumber, setNewRequestNumber] = useState(''); // Add state for new request number
 
-  const [selectedRequestNumber, setSelectedRequestNumber] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showCreateRequestModal, setShowCreateRequestModal] = useState(false);
-  const [newRequestNumber] = useState('');
+  const navigate = useNavigate();
 
-  // Загрузка списка статусов
   useEffect(() => {
     requestService.getRequestStatuses()
       .then(response => setStatuses(response))
       .catch(error => console.error('Ошибка при загрузке статусов:', error));
   }, []);
 
-  // Функция для загрузки заявок
   const fetchRequests = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const response = await requestService.getRequests({
         requestNumber: searchRequestNumber,
         barcode: searchBarcode,
-        status: selectedStatus,  // Добавляем фильтрацию по статусу
+        status: selectedStatus,
         sortField: sortField,
         sortOrder: sortOrder,
         page: page
@@ -66,14 +63,8 @@ const Requests = () => {
     setSortOrder(newSortOrder);
   };
 
-  const openModal = (requestNumber) => {
-    setSelectedRequestNumber(requestNumber);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedRequestNumber(null);
+  const openRequestPage = (requestNumber) => {
+    navigate(`/fs_stockman_requestview/${requestNumber}`);
   };
 
   const openCreateRequestModal = () => {
@@ -104,7 +95,6 @@ const Requests = () => {
           onChange={(e) => setSearchBarcode(e.target.value)}
         />
 
-        {/* Выпадающий список для фильтрации по статусу */}
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
@@ -140,7 +130,7 @@ const Requests = () => {
             {requests && requests.length > 0 ? (
               requests.map((request, index) => (
                 <tr key={request.RequestNumber || index}>
-                  <td onClick={() => openModal(request.RequestNumber)}>{request.RequestNumber}</td>
+                  <td onClick={() => openRequestPage(request.RequestNumber)}>{request.RequestNumber}</td>
                   <td>{request.creation_date}</td>
                   <td>{request.stockman ? `${request.stockman.first_name} ${request.stockman.last_name}` : 'Не назначен'}</td>
                   <td>{request.photographer_first_name ? `${request.photographer_first_name} ${request.photographer_last_name}` : 'Не назначен'}</td>
@@ -165,14 +155,6 @@ const Requests = () => {
         <button onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>Следующая</button>
         <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Последняя</button>
       </div>
-
-      {isModalOpen && (
-        <RequestModalStockman
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          requestNumber={selectedRequestNumber}
-        />
-      )}
 
       {showCreateRequestModal && (
         <CreateRequestModal

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import * as XLSX from 'xlsx'; // Import xlsx library
+import * as XLSX from 'xlsx';
 import orderService from '../services/orderService';
 import './okz_OrderView.css';
 
@@ -11,15 +11,17 @@ const OkzOrderView = () => {
   const [scannedCode, setScannedCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  let scanBuffer = ''; // Buffer for barcode scanning
-  let scanTimeout = null; // Timeout for clearing the buffer
+  let scanBuffer = '';
+  let scanTimeout = null;
 
   useEffect(() => {
     const fetchOrder = async () => {
       try {
         const data = await orderService.getOrderDetails(orderNumber);
         data.products = data.products.sort((a, b) => (a.cell < b.cell ? -1 : a.cell > b.cell ? 1 : 0));
-        setOrder(data);
+        
+        const assembledCount = data.products.filter(product => product.assembled).length;
+        setOrder({ ...data, assembledCount, totalProducts: data.products.length });
         setLoading(false);
       } catch (err) {
         setError('Не удалось загрузить данные заказа');
@@ -86,9 +88,9 @@ const OkzOrderView = () => {
     if (!order) return;
 
     const ws = XLSX.utils.aoa_to_sheet([
-      [`Заказ № ${orderNumber}`], // First row with order number
-      [], // Empty row
-      ['Штрихкод', 'Наименование', 'Ячейка', 'Статус сборки', 'Время сборки'] // Header row
+      [`Заказ № ${orderNumber}`], 
+      [], 
+      ['Штрихкод', 'Наименование', 'Ячейка', 'Статус сборки', 'Время сборки']
     ]);
 
     order.products.forEach((product) => {
@@ -107,6 +109,58 @@ const OkzOrderView = () => {
     XLSX.writeFile(wb, filename);
   };
 
+  const printOrder = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Печать Заказа №${orderNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; font-size: 14px;}
+            h1 { text-align: center; }
+            .order-info { margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10px;}
+            th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <h1>Заказ № ${orderNumber}</h1>
+          <div class="order-info">
+            <p><strong>Сотрудник сборки:</strong> ${order.assembly_user ? `${order.assembly_user.first_name} ${order.assembly_user.last_name}` : 'Не указан'}</p>
+            <p><strong>Количество:</strong> ${order.assembledCount}/${order.totalProducts}</p>
+            <p><strong>Статус:</strong> ${order?.status?.name || 'Не указан'}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Штрихкод</th>
+                <th>Наименование</th>
+                <th>Ячейка</th>
+                <th>Статус сборки</th>
+                <th>Время сборки</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.products.map(product => `
+                <tr>
+                  <td>${product.barcode}</td>
+                  <td>${product.name}</td>
+                  <td>${product.cell}</td>
+                  <td>${product.assembled ? 'Собран' : 'Не собран'}</td>
+                  <td>${product.assembled_date ? new Date(product.assembled_date).toLocaleString() : ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+    printWindow.onafterprint = () => printWindow.close();
+  };
+
   if (loading) return <div>Загрузка...</div>;
   if (error) return <div>{error}</div>;
 
@@ -114,8 +168,13 @@ const OkzOrderView = () => {
     <div className="order-view" onKeyDown={(e) => e.preventDefault()}>
       <button className="back-button" onClick={() => navigate('/okz_list')}>Назад</button>
       <button className="download-button" onClick={downloadExcel}>Скачать Excel</button>
+      <button className="print-button" onClick={printOrder}>Печать</button>
       <div className="order-header">
         <h1>Детали заказа {orderNumber}</h1>
+        <div className="order-info">
+          <p><strong>Сотрудник сборки:</strong> {order?.assembly_user?.first_name} {order?.assembly_user?.last_name || 'Не указан'}</p>
+          <p><strong>Количество:</strong> {order?.assembledCount}/{order?.totalProducts}</p>
+        </div>
         <div className="order-status">
           <span>Статус: {order?.status?.name || 'Не указан'}</span>
           {order.status.id === 2 && (

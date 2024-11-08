@@ -6,7 +6,7 @@ const getAuthHeaders = () => {
 };
 
 
-const API_URL = 'http://192.168.6.251:8000/';
+const API_URL = 'http://192.168.6.245:8000/';
 
 const getOrderStatuses = async () => {
   try {
@@ -121,6 +121,16 @@ const acceptProducts = async (orderNumber, barcodes) => {
   }
 };
 
+const checkOrderStatus = async (orderNumber) => {
+  try {
+    const response = await axios.get(`${API_URL}orders/check/${orderNumber}/`);
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при проверке статуса заказа:', error);
+    throw error;
+  }
+};
+
 const orderService = {
   getOrderStatuses,
   getOrders,
@@ -130,7 +140,8 @@ const orderService = {
   startAssembly,
   assembleProduct,
   startAcceptance,
-  acceptProducts
+  acceptProducts,
+  checkOrderStatus
 };
 
 export default orderService;
