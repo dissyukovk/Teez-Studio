@@ -887,9 +887,15 @@ def request_details(request, request_number):
 def barcode_details(request, barcode):
     try:
         product = Product.objects.get(barcode=barcode)
-        return Response({'exists': True, 'name': product.name, 'movementStatus': product.move_status.name})
+        return Response({
+            'exists': True,
+            'name': product.name,
+            'movementStatus': product.move_status.name,
+            'status_id': product.move_status.id  # Добавляем ID статуса
+        })
     except Product.DoesNotExist:
         return Response({'exists': False}, status=404)
+
 
 @api_view(['POST'])
 def update_request(request, request_number):
@@ -1535,7 +1541,7 @@ def categories_list(request):
 @api_view(['GET'])
 def defect_operations_list(request):
     # Filter for operations with type ID 25 (defect)
-    defect_operations = ProductOperation.objects.filter(operation_type_id=25)
+    defect_operations = ProductOperation.objects.filter(operation_type_id__in=[25, 30])
 
     # Search and filter parameters
     barcode = request.query_params.get('barcode', None)
@@ -1736,11 +1742,11 @@ class ReadyPhotosView(APIView):
         if seller_id:
             ready_products = ready_products.filter(product__seller__icontains=seller_id)
 
-        # Filter by date if provided
+        # Filter by retouch_date if provided
         if date:
             try:
                 date_obj = datetime.strptime(date, "%Y-%m-%d")
-                ready_products = ready_products.filter(request__creation_date__date=date_obj)
+                ready_products = ready_products.filter(request__retouch_date__date=date_obj)
             except ValueError:
                 return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
 
@@ -1862,3 +1868,41 @@ def check_order_status(request, order_number):
         
     except Order.DoesNotExist:
         return Response({'error': 'Order not found'}, status=404)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_as_opened(request):
+    barcode = request.data.get('barcode')
+    user_id = request.data.get('userId')
+    comment = "Вскрыто"  # Default comment for "Вскрыто" operation
+
+    if not barcode or not user_id:
+        return Response({'error': 'Barcode and userId are required'}, status=400)
+
+    # Retrieve the user
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    # Retrieve the product and update its status
+    try:
+        product = Product.objects.get(barcode=barcode)
+        product.move_status_id = 30  # Set status to "Вскрыто"
+        product.save()
+    except Product.DoesNotExist:
+        return Response({'error': 'Product not found'}, status=404)
+
+    # Log the operation
+    try:
+        ProductOperation.objects.create(
+            product=product,
+            operation_type_id=30,  # Operation type "Вскрыто"
+            user=user,
+            comment=comment,
+            date=timezone.now()
+        )
+    except Exception as e:
+        return Response({'error': f'Failed to log operation: {str(e)}'}, status=500)
+
+    return Response({'message': 'Product marked as opened, status updated, and logged successfully'}, status=200)

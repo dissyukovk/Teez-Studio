@@ -124,6 +124,10 @@ const AcceptanceModal = ({ orderNumber, products, closeModal }) => {
         <div className="acceptance-modal">
           <h2>Приемка заказа №{orderNumber}</h2>
           <p>Сканируйте штрихкоды для приемки</p>
+
+          {/* Счетчик количества отсканированных товаров */}
+          <p>Количество отсканированных товаров: {scannedBarcodes.length}</p>
+
           <div className="scanned-table-container">
             <table className="scanned-table">
               <thead>

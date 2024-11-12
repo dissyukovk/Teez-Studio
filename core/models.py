@@ -98,7 +98,7 @@ class Order(models.Model):
     )  # Пользователь, который принял товар
 
     def __str__(self):
-        return self.OrderNumber
+        return str(self.OrderNumber)
 
 class OrderProduct(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)

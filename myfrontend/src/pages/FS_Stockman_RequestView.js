@@ -42,15 +42,24 @@ const FSStockmanRequestView = () => {
           setErrorMessage('Штрихкод не найден');
           return;
         }
+        // Проверка, что статус товара "Принят" (id = 3)
+        if (response.status_id !== 3) {
+          alert('Товар не принят');
+          return;
+        }
+        // Если статус принят, добавляем штрихкод в список
         setAddedBarcodes(prevAdded => [...prevAdded, newBarcode]);
-        setBarcodes(prevBarcodes => [{ barcode: newBarcode, name: response.name, movementStatus: response.movementStatus }, ...prevBarcodes]);
+        setBarcodes(prevBarcodes => [
+          { barcode: newBarcode, name: response.name, movementStatus: response.movementStatus },
+          ...prevBarcodes,
+        ]);
         setErrorMessage('');
       })
       .catch(error => {
         setErrorMessage('Ошибка при получении данных штрихкода');
       });
   };
-
+  
   const handleBarcodeScan = (e) => {
     if (e.key === 'Enter' && e.target.value) {
       const scannedBarcode = e.target.value.trim();

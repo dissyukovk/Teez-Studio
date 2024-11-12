@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.6.245:8000/';  // Убедитесь, что это правильный URL
+const API_URL = 'http://192.168.6.56:8000/';  // Убедитесь, что это правильный URL
 
 // Получаем токен из localStorage
 const getAuthHeaders = () => {
@@ -306,6 +306,22 @@ const getRetouchers = async () => {
   }
 };
 
+const markAsOpened = async (barcode, userId) => {
+  try {
+    const response = await axios.post(`${API_URL}api/mark-as-opened/`, {
+      barcode,
+      userId
+    }, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при пометке товара как вскрыто:', error);
+    throw error;
+  }
+};
+
+
 // Остальные функции...
 
 // Экспортируем все функции
@@ -328,6 +344,7 @@ const productService = {
   getStockman,
   getPhotographers,
   getRetouchers,
+  markAsOpened
   // Остальные экспортируемые функции...
 };
 

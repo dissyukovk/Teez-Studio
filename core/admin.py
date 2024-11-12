@@ -59,6 +59,7 @@ class RetouchStatusAdmin(admin.ModelAdmin):
 class OrderAdmin(admin.ModelAdmin):
     list_display = ['OrderNumber', 'date', 'creator', 'status']
     search_fields = ['OrderNumber', 'creator__username']
+    ordering = ['OrderNumber']
 
 @admin.register(OrderStatus)
 class OrderStatusAdmin(admin.ModelAdmin):

@@ -114,6 +114,7 @@ urlpatterns = [
     path('public/defect-operations/', defect_operations_list, name='defect-operations-list'),
     path('api/photographer-stats/', PhotographerStatsView.as_view(), name='photographer-stats'),
     path('api/retoucher-stats/', RetoucherStatsView.as_view(), name='retouch-stats'),
+    
 
     # Основные API
     path('api/products/', product_list, name='product-list'),
@@ -145,6 +146,7 @@ urlpatterns = [
     path('accept-order/<str:order_number>/', views.accept_order_products, name='accept_products'),
     path('accepted-order/<str:order_number>/<int:new_status>/', views.update_order_status, name='update_order_status'),
     path('orders/check/<str:order_number>/', views.check_order_status, name='check_order_status'),
+    path('api/mark-as-opened/', views.mark_as_opened, name='mark_as_opened'),
        
     # Путь для получения деталей заявки
     path('requests/<int:request_number>/details/', request_details, name='request_details'),

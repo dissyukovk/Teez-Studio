@@ -4,7 +4,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './DefectOperations.css';
 
-const API_URL = 'http://192.168.6.245:8000/public/defect-operations/';
+const API_URL = 'http://192.168.6.56:8000/public/defect-operations/';
 
 const DefectOperations = () => {
   const [operations, setOperations] = useState([]);
@@ -14,9 +14,9 @@ const DefectOperations = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchBarcode, setSearchBarcode] = useState('');
   const [searchName, setSearchName] = useState('');
-  const [sortColumn, setSortColumn] = useState(''); // Display name of the column
-  const [sortField, setSortField] = useState(''); // Field name for the backend
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortColumn, setSortColumn] = useState('date'); // Display name of the default column
+  const [sortField, setSortField] = useState('date'); // Field name for the backend (default to 'date')
+  const [sortOrder, setSortOrder] = useState('desc'); // Default order to 'desc'
 
   useEffect(() => {
     fetchOperations();
@@ -27,26 +27,21 @@ const DefectOperations = () => {
     setError('');
 
     const params = {
-      page: page > 0 ? page : 1, // Проверка на положительный номер страницы
+      page: page > 0 ? page : 1,
       barcode: searchBarcode,
       name: searchName,
+      sort_field: sortField,
       sort_order: sortOrder,
     };
-
-    if (sortField) {
-      params.sort_field = sortField;
-    }
 
     try {
       const response = await axios.get(API_URL, { params });
       const data = response.data;
 
-      // Обновляем данные операций и общее количество страниц
       setOperations(data.results || []);
-      const calculatedTotalPages = Math.ceil(data.count / 100); // Здесь используем 100 для page_size
+      const calculatedTotalPages = Math.ceil(data.count / 100);
       setTotalPages(calculatedTotalPages);
 
-      // Если номер страницы превышает totalPages, сбрасываем на первую страницу
       if (page > calculatedTotalPages) {
         console.log(`Page ${page} is invalid, resetting to page 1.`);
         setPage(1);
@@ -75,7 +70,7 @@ const DefectOperations = () => {
     const sortFields = {
       barcode: 'product__barcode',
       product_name: 'product__name',
-      user_full_name: 'user_full_name', // if you have this field for user
+      user_full_name: 'user_full_name',
       date: 'date',
     };
 
@@ -83,7 +78,7 @@ const DefectOperations = () => {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
       setSortColumn(column);
-      setSortField(sortFields[column] || column); // Set the correct backend field name
+      setSortField(sortFields[column] || column);
       setSortOrder('asc');
     }
   };

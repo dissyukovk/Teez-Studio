@@ -82,7 +82,7 @@ const ProductTable = () => {
     <div className="main-content">
       <h1>Список товаров</h1>
       <div className="action-buttons">
-        <button onClick={openModalIncome} className="primary-button">Начать приемку</button>
+        {/* <button onClick={openModalIncome} className="primary-button">Начать приемку</button> */}
         <button onClick={openModalOutcome} className="secondary-button">Начать отправку</button>
       </div>
 
@@ -152,7 +152,7 @@ const ProductTable = () => {
                   <td>{product.category_name}</td>
                   <td>{product.in_stock_sum}</td>
                   <td>{product.seller}</td>
-                  <td>{product.income_date}</td>
+                  <td>{product.income_date ? new Date(product.income_date).toLocaleString() : ""}</td>
                   <td>{product.move_status}</td>
                 </tr>
               ))

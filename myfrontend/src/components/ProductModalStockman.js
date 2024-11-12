@@ -40,6 +40,19 @@ const ProductModalStockman = ({ barcode, closeModal }) => {
     }
   };  
 
+  const handleMarkAsOpened = async () => {
+    try {
+      const userId = await authService.getCurrentUserId();
+      if (!userId) throw new Error("Не удалось получить идентификатор пользователя.");
+  
+      await productService.markAsOpened(barcode, userId);
+      alert('Товар помечен как вскрыто');
+      closeModal();
+    } catch (error) {
+      alert('Ошибка при пометке товара как вскрыто');
+    }
+  };  
+
   if (!productData) {
     return <div>Загрузка...</div>;
   }
@@ -74,6 +87,7 @@ const ProductModalStockman = ({ barcode, closeModal }) => {
 
         {/* Кнопка для пометки как "брак" */}
         <button onClick={handleMarkAsDefective} className="defect-button">Брак</button>
+        <button onClick={handleMarkAsOpened} className="opened-button">Вскрыто</button>
         <button onClick={closeModal} className="close-button">Закрыть</button>
 
         {errorMessage && <div className="error-message">{errorMessage}</div>}
