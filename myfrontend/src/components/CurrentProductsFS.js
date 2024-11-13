@@ -8,25 +8,33 @@ const CurrentProductsFS = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Основные состояния для поиска
   const [searchBarcode, setSearchBarcode] = useState('');
   const [searchName, setSearchName] = useState('');
+
+  // Временные состояния для полей поиска
+  const [tempBarcode, setTempBarcode] = useState('');
+  const [tempName, setTempName] = useState('');
+
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [move_status, setMoveStatus] = useState([3, 25]);
+  const [move_status] = useState([3, 25]);
 
-  // Загрузка товаров со статусами 3 и 25
-  const fetchProducts = useCallback(async (page = 1) => {
+  // Функция для загрузки продуктов
+  const fetchProducts = useCallback(async (page = 1, barcode = searchBarcode, name = searchName) => {
     try {
       setLoading(true);
       const response = await productService.getProducts(
-        searchName,
-        searchBarcode,
+        name,
+        barcode,
         sortField,
         sortOrder,
         page,
         100,
-        [3, 25] // Массив ID статусов для фильтрации
+        move_status
       );
+
       if (response && response.results) {
         setProducts(response.results);
         setTotalPages(Math.ceil(response.count / 100));
@@ -38,14 +46,8 @@ const CurrentProductsFS = () => {
       setError('Не удалось загрузить продукты');
       setLoading(false);
     }
-  }, [searchName, searchBarcode, sortField, sortOrder]);
+  }, [searchBarcode, searchName, sortField, sortOrder, move_status]);
 
-  // Первоначальная загрузка данных при монтировании компонента
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  // Обновление данных при изменении страницы
   useEffect(() => {
     fetchProducts(currentPage);
   }, [currentPage, fetchProducts]);
@@ -68,6 +70,14 @@ const CurrentProductsFS = () => {
     setSortOrder(newSortOrder);
   };
 
+  // Функция для обработки кнопки поиска
+  const handleSearch = () => {
+    setSearchBarcode(tempBarcode);
+    setSearchName(tempName);
+    setCurrentPage(1);
+    fetchProducts(1, tempBarcode, tempName);
+  };
+
   return (
     <div className="main-content">
       <h1>Текущие товары на ФС</h1>
@@ -75,18 +85,21 @@ const CurrentProductsFS = () => {
         <input
           type="text"
           placeholder="Поиск по штрихкоду"
-          value={searchBarcode}
-          onChange={(e) => setSearchBarcode(e.target.value)}
+          value={tempBarcode}
+          onChange={(e) => setTempBarcode(e.target.value)}
         />
         <input
           type="text"
           placeholder="Поиск по наименованию"
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value)}
+          value={tempName}
+          onChange={(e) => setTempName(e.target.value)}
         />
+        <button onClick={handleSearch}>Поиск</button>
       </div>
+
       {loading && <div>Загрузка...</div>}
       {error && <div>{error}</div>}
+
       <div className="table-container">
         <table className="products-table">
           <thead>
