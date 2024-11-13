@@ -37,12 +37,15 @@ const ProductTable = () => {
         [selectedMoveStatus],
         selectedStockman
       );
-
-      setProducts(response.results || []);
+  
+      // Проверяем, если в ответе есть поле results и products
+      const productsData = response.results && response.results.products ? response.results.products : [];
+      
+      setProducts(productsData);
       setTotalPages(Math.ceil(response.count / 100));
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('Ошибка при загрузке продуктов:', error);
       setError('Не удалось загрузить продукты');
       setLoading(false);
     }

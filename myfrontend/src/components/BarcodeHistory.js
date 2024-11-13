@@ -8,19 +8,26 @@ const BarcodeHistory = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState('date');
-  const [sortOrder, setSortOrder] = useState('desc'); // По умолчанию убывание по дате
+  const [sortOrder, setSortOrder] = useState('desc'); // Default sorting by descending date
   const [totalPages, setTotalPages] = useState(1);
+  const [lastRequest, setLastRequest] = useState(null);
+  const [lastInvoice, setLastInvoice] = useState(null);
 
   const handleSearch = async () => {
     try {
       const data = await productService.getProductHistoryByBarcode(barcode, page, sortField, sortOrder);
-      if (data.results.length === 0) {
+  
+      if (data && data.results && data.results.history && data.results.history.length > 0) {
+        setHistory(data.results.history); // Устанавливаем историю операций
+        setTotalPages(data.total_pages || 1);
+        setErrorMessage('');
+  
+        // Получаем последнюю заявку и накладную, если они есть
+        setLastRequest(data.results.last_request || null);
+        setLastInvoice(data.results.last_invoice || null);
+      } else {
         setErrorMessage('нет истории этого шк на фс');
         setHistory([]);
-      } else {
-        setHistory(data.results);
-        setTotalPages(data.total_pages);
-        setErrorMessage('');
       }
     } catch (error) {
       console.error(error);
@@ -32,7 +39,7 @@ const BarcodeHistory = () => {
     const newOrder = sortField === field && sortOrder === 'asc' ? 'desc' : 'asc';
     setSortField(field);
     setSortOrder(newOrder);
-    setPage(1); // Сбрасываем на первую страницу при сортировке
+    setPage(1); // Reset to the first page when sorting
   };
 
   useEffect(() => {
@@ -49,7 +56,7 @@ const BarcodeHistory = () => {
           onChange={(e) => setBarcode(e.target.value)}
           placeholder="Введите штрихкод"
         />
-        <button onClick={handleSearch}>Поиск</button>
+        <button className="search-button" onClick={handleSearch}>Поиск</button>
       </div>
 
       {errorMessage && <p className="error-message">{errorMessage}</p>}
@@ -62,24 +69,40 @@ const BarcodeHistory = () => {
               <th onClick={() => handleSort('user_full_name')}>Пользователь</th>
               <th onClick={() => handleSort('date')}>Дата {sortField === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
               <th>Комментарий</th>
+              <th>№ документа</th>
+              <th>Дата документа</th>
             </tr>
           </thead>
           <tbody>
-            {history.map((entry, index) => (
-              <tr key={index}>
-                <td>{entry.operation_type_name || 'N/A'}</td>
-                <td>{entry.user_full_name || 'N/A'}</td>
-                <td>{new Date(entry.date).toLocaleString()}</td>
-                <td>{entry.comment || 'Нет комментария'}</td>
-              </tr>
-            ))}
-          </tbody>
+              {history.map((entry, index) => (
+                <tr key={index}>
+                  <td>{entry.operation_type_name || 'N/A'}</td>
+                  <td>{entry.user_full_name || 'N/A'}</td>
+                  <td>{new Date(entry.date).toLocaleString()}</td>
+                  <td>{entry.comment || 'Нет комментария'}</td>
+                  <td>
+                    {entry.operation_type_name === 'Принят' || entry.operation_type_name === 'Фото'
+                      ? lastRequest?.RequestNumber || 'N/A'
+                      : lastInvoice?.InvoiceNumber || 'N/A'}
+                  </td>
+                  <td>
+                    {entry.operation_type_name === 'Принят' || entry.operation_type_name === 'Фото'
+                      ? lastRequest?.creation_date
+                        ? new Date(lastRequest.creation_date).toLocaleString()
+                        : 'N/A'
+                      : lastInvoice?.date
+                      ? new Date(lastInvoice.date).toLocaleString()
+                      : 'N/A'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
         </table>
       ) : (
         !errorMessage && <p>Нет данных по истории для данного штрихкода.</p>
       )}
 
-      {/* Пагинация */}
+      {/* Pagination */}
       <div className="pagination">
         <button onClick={() => setPage((prev) => Math.max(prev - 1, 1))} disabled={page === 1}>
           Назад

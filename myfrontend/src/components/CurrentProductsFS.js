@@ -36,7 +36,7 @@ const CurrentProductsFS = () => {
       );
 
       if (response && response.results) {
-        setProducts(response.results);
+        setProducts(response.results.products); // Добавьте .products, если результаты вложены
         setTotalPages(Math.ceil(response.count / 100));
       } else {
         setProducts([]);
@@ -108,6 +108,7 @@ const CurrentProductsFS = () => {
               <th onClick={() => handleSort('name')}>Наименование</th>
               <th onClick={() => handleSort('cell')}>Ячейка</th>
               <th onClick={() => handleSort('move_status')}>Статус движения</th>
+              <th>Заявка</th> {/* Добавлено новое поле */}
             </tr>
           </thead>
           <tbody>
@@ -118,11 +119,12 @@ const CurrentProductsFS = () => {
                   <td>{product.name}</td>
                   <td>{product.cell}</td>
                   <td>{product.move_status}</td>
+                  <td>{product.request_number || 'N/A'}</td> {/* Добавляем номер заявки */}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="4">Продукты не найдены</td>
+                <td colSpan="5">Продукты не найдены</td> {/* Увеличено значение для colspan */}
               </tr>
             )}
           </tbody>

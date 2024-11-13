@@ -296,9 +296,23 @@ def product_list(request):
     # Pagination
     paginator = ProductPagination()
     paginated_products = paginator.paginate_queryset(products, request)
-    serializer = ProductSerializer(paginated_products, many=True)
-    return paginator.get_paginated_response(serializer.data)
+    product_serializer = ProductSerializer(paginated_products, many=True)
 
+    # Retrieve and serialize the latest request and invoice
+    latest_request = STRequest.objects.order_by('-creation_date').first()
+    latest_invoice = Invoice.objects.order_by('-date').first()
+
+    latest_request_data = STRequestSerializer(latest_request).data if latest_request else None
+    latest_invoice_data = InvoiceSerializer(latest_invoice).data if latest_invoice else None
+
+    # Include the serialized data in the response
+    response_data = {
+        'products': product_serializer.data,
+        'latest_request': latest_request_data,
+        'latest_invoice': latest_invoice_data
+    }
+    
+    return paginator.get_paginated_response(response_data)
 
 # Фильтрация для STRequest
 @api_view(['GET'])
@@ -1363,17 +1377,18 @@ def upload_products_batch(request):
 @api_view(['GET'])
 def get_history_by_barcode(request, barcode):
     try:
+        # История операций с продуктом
         history = ProductOperation.objects.filter(product__barcode=barcode).select_related('operation_type', 'user')
 
         # Получаем параметры сортировки
         sort_field = request.query_params.get('sort_field', 'date')
         sort_order = request.query_params.get('sort_order', 'desc')
 
-        # Проверяем, если запрос идет по связанному полю
+        # Проверка сортировки по связанному полю
         if sort_field == 'operation_type_name':
             sort_field = 'operation_type__name'
         elif sort_field == 'user_full_name':
-            sort_field = 'user__first_name'  # Сортировка только по имени пользователя для простоты
+            sort_field = 'user__first_name'  # Сортировка по имени пользователя для упрощения
 
         if sort_order == 'desc':
             sort_field = f'-{sort_field}'
@@ -1385,22 +1400,51 @@ def get_history_by_barcode(request, barcode):
         paginator = ProductHistoryPagination()
         paginated_history = paginator.paginate_queryset(history, request)
 
-        # Подготовка данных для ответа
-        data = [
+        # Подготовка данных истории операций
+        history_data = [
             {
                 "operation_type_name": entry.operation_type.name,
-                "user_full_name": f"{entry.user.first_name} {entry.user.last_name}",
+                "user_full_name": f"{entry.user.first_name} {entry.user.last_name}" if entry.user else "Unknown",
                 "date": entry.date,
                 "comment": entry.comment
             }
             for entry in paginated_history
         ]
-        return paginator.get_paginated_response(data)
+
+        # Получение последней заявки, связанной с продуктом
+        last_request = (
+            STRequestProduct.objects.filter(product__barcode=barcode)
+            .select_related('request')
+            .order_by('-request__creation_date')
+            .first()
+        )
+
+        # Получение последней накладной, связанной с продуктом
+        last_invoice = (
+            InvoiceProduct.objects.filter(product__barcode=barcode)
+            .select_related('invoice')
+            .order_by('-invoice__date')
+            .first()
+        )
+
+        # Сериализация последних заявки и накладной, если они существуют
+        last_request_data = STRequestSerializer(last_request.request).data if last_request else None
+        last_invoice_data = InvoiceSerializer(last_invoice.invoice).data if last_invoice else None
+
+        # Ответ с историей операций и последней заявкой/накладной
+        response_data = {
+            "history": history_data,
+            "last_request": last_request_data,
+            "last_invoice": last_invoice_data
+        }
+
+        return paginator.get_paginated_response(response_data)
 
     except FieldError as e:
         return Response({'error': str(e)}, status=400)
     except ProductOperation.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+
 
 # View for Move Statuses
 @api_view(['GET'])
