@@ -16,8 +16,13 @@ const Requests = () => {
   const [statuses, setStatuses] = useState([]);
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [showCreateRequestModal, setShowCreateRequestModal] = useState(false); // Add state for modal visibility
-  const [newRequestNumber, setNewRequestNumber] = useState(''); // Add state for new request number
+  const [showCreateRequestModal, setShowCreateRequestModal] = useState(false);
+  const [newRequestNumber, setNewRequestNumber] = useState('');
+
+  // Поля для временного хранения значений полей поиска
+  const [tempRequestNumber, setTempRequestNumber] = useState('');
+  const [tempBarcode, setTempBarcode] = useState('');
+  const [tempStatus, setTempStatus] = useState('');
 
   const navigate = useNavigate();
 
@@ -27,16 +32,16 @@ const Requests = () => {
       .catch(error => console.error('Ошибка при загрузке статусов:', error));
   }, []);
 
-  const fetchRequests = useCallback(async (page = 1) => {
+  const fetchRequests = useCallback(async (page = 1, requestNumber = searchRequestNumber, barcode = searchBarcode, status = selectedStatus) => {
     try {
       setLoading(true);
       const response = await requestService.getRequests({
-        requestNumber: searchRequestNumber,
-        barcode: searchBarcode,
-        status: selectedStatus,
-        sortField: sortField,
-        sortOrder: sortOrder,
-        page: page
+        requestNumber,
+        barcode,
+        status,
+        sortField,
+        sortOrder,
+        page
       });
 
       if (response && response.results) {
@@ -51,7 +56,7 @@ const Requests = () => {
       setError('Не удалось загрузить заявки');
       setLoading(false);
     }
-  }, [searchRequestNumber, searchBarcode, selectedStatus, sortField, sortOrder]);
+  }, [sortField, sortOrder]);
 
   useEffect(() => {
     fetchRequests(currentPage);
@@ -75,6 +80,15 @@ const Requests = () => {
     setShowCreateRequestModal(false);
   };
 
+  // Обработка поиска по нажатию кнопки
+  const handleSearch = () => {
+    setSearchRequestNumber(tempRequestNumber);
+    setSearchBarcode(tempBarcode);
+    setSelectedStatus(tempStatus);
+    setCurrentPage(1);
+    fetchRequests(1, tempRequestNumber, tempBarcode, tempStatus);
+  };
+
   return (
     <div className="content">
       <h1>Заявки</h1>
@@ -85,19 +99,19 @@ const Requests = () => {
         <input
           type="text"
           placeholder="Поиск по номеру заявки"
-          value={searchRequestNumber}
-          onChange={(e) => setSearchRequestNumber(e.target.value)}
+          value={tempRequestNumber}
+          onChange={(e) => setTempRequestNumber(e.target.value)}
         />
         <input
           type="text"
           placeholder="Поиск по штрихкоду"
-          value={searchBarcode}
-          onChange={(e) => setSearchBarcode(e.target.value)}
+          value={tempBarcode}
+          onChange={(e) => setTempBarcode(e.target.value)}
         />
 
         <select
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
+          value={tempStatus}
+          onChange={(e) => setTempStatus(e.target.value)}
         >
           <option value="">Все статусы</option>
           {statuses.map((status) => (
@@ -107,7 +121,7 @@ const Requests = () => {
           ))}
         </select>
 
-        <button onClick={() => fetchRequests(1)}>Поиск</button>
+        <button onClick={handleSearch}>Поиск</button>
       </div>
 
       {loading && <div>Загрузка...</div>}

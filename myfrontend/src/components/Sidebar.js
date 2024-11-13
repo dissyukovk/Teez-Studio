@@ -72,6 +72,9 @@ function Sidebar({ user }) {
             <li>
               <NavLink to="/photographer-stats" activeClassName="active">Статистика фотографов</NavLink>
             </li>
+            <li>
+              <NavLink to="/requests/manager" activeClassName="active">Заявки (общий лист)</NavLink>
+            </li>
           </>
         )}
 
