@@ -18,8 +18,7 @@ const OkzOrderView = () => {
     const fetchOrder = async () => {
       try {
         const data = await orderService.getOrderDetails(orderNumber);
-        data.products = data.products.sort((a, b) => (a.cell < b.cell ? -1 : a.cell > b.cell ? 1 : 0));
-        
+  
         const assembledCount = data.products.filter(product => product.assembled).length;
         setOrder({ ...data, assembledCount, totalProducts: data.products.length });
         setLoading(false);
@@ -29,7 +28,7 @@ const OkzOrderView = () => {
       }
     };
     fetchOrder();
-  }, [orderNumber]);
+  }, [orderNumber]);  
 
   useEffect(() => {
     const handleKeyDown = (event) => {

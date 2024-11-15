@@ -22,7 +22,7 @@ const AdminProducts = () => {
   const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://192.168.6.87:8000/api/products/?page=${page}`, {
+      const response = await axios.get(`http://192.168.6.247:8000/api/products/?page=${page}`, {
         headers: getAuthHeaders(), // Добавляем заголовки аутентификации
       });
       console.log('Response Data:', response.data);
@@ -98,7 +98,7 @@ const handleSubmit = async () => {
   console.log('Отправляемые данные:', fileData);
 
   try {
-    const response = await axios.post('http://192.168.6.87:8000/api/upload-batch/', { data: fileData }, {
+    const response = await axios.post('http://192.168.6.247:8000/api/upload-batch/', { data: fileData }, {
       headers: getAuthHeaders(), // Добавляем заголовки аутентификации
     });
     console.log('Ответ сервера:', response.data);
