@@ -73,8 +73,11 @@ const Requests = () => {
   };
 
   const openCreateRequestModal = () => {
-    setShowCreateRequestModal(true);
+    if (!showCreateRequestModal) {
+      setShowCreateRequestModal(true);
+    }
   };
+  
 
   const closeCreateRequestModal = () => {
     setShowCreateRequestModal(false);

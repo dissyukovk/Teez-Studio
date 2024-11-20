@@ -58,17 +58,23 @@ const createRequest = async (requestNumber, barcodes) => {
   }
 };
 
-const createDraftRequest = async () => {
-  try {
+let isCreatingRequest = false;
+
+  const createDraftRequest = async () => {
+    if (isCreatingRequest) return; // Предотвращаем повторные вызовы
+    isCreatingRequest = true;
+
+    try {
     const response = await axios.post(`${API_URL}api/create-draft-request/`, {}, {
       headers: getAuthHeaders(),
     });
-    return response.data; // Возвращаем номер заявки
-  } catch (error) {
-    console.error('Ошибка при создании черновика заявки:', error);
-    throw error;
-  }
-};
+      return response.data;
+    } catch (error) {
+      throw error;
+    } finally {
+      isCreatingRequest = false;
+    }
+  };
 
 const finalizeRequest = async (requestNumber, barcodes) => {
   try {

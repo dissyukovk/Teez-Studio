@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef  } from 'react';
 import productService from '../services/productService';
 import requestService from '../services/requestService';
 import './CreateRequestModal.css';
@@ -9,25 +9,24 @@ const CreateRequestModal = ({ closeModal }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [requestNumber, setRequestNumber] = useState(null); // Добавляем состояние для номера заявки
   const [isRequestCreated, setIsRequestCreated] = useState(false); // Флаг для контроля создания заявки
+  const requestCreatedRef = useRef(false);
 
-  // При монтировании модального окна создаем черновик заявки только один раз
   useEffect(() => {
-    let isMounted = true; // Флаг для контроля монтирования
     const createDraftRequest = async () => {
+      if (requestCreatedRef.current) return; // Если уже был вызов, пропускаем
+  
       try {
-        if (isMounted && !isRequestCreated) {  // Проверка флага и монтирования
-          const response = await requestService.createDraftRequest();
-          setRequestNumber(response.requestNumber); 
-          setIsRequestCreated(true);
-        }
+        const response = await requestService.createDraftRequest();
+        setRequestNumber(response.requestNumber);
+        requestCreatedRef.current = true; // Устанавливаем флаг
       } catch (error) {
+        console.error('Ошибка при создании черновика заявки:', error);
         setErrorMessage('Ошибка при создании черновика заявки');
       }
     };
-    createDraftRequest();
   
-    return () => { isMounted = false; }; // Устанавливаем флаг false при размонтировании
-  }, [isRequestCreated]);  
+    createDraftRequest();
+  }, []);   
 
   const handleAddBarcode = async (e) => {
     e.preventDefault();
@@ -100,6 +99,7 @@ const CreateRequestModal = ({ closeModal }) => {
           <table>
             <thead>
               <tr>
+                <th>№</th> {/* Новый заголовок для нумерации */}
                 <th>Штрихкод</th>
                 <th>Статус движения товара</th>
               </tr>
@@ -107,6 +107,7 @@ const CreateRequestModal = ({ closeModal }) => {
             <tbody>
               {scannedBarcodes.map((item, index) => (
                 <tr key={index}>
+                  <td>{index + 1}</td> {/* Добавляем нумерацию строк */}
                   <td>{item.barcode}</td>
                   <td>{item.moveStatus}</td>
                 </tr>
@@ -114,6 +115,7 @@ const CreateRequestModal = ({ closeModal }) => {
             </tbody>
           </table>
         </div>
+
 
         {/* Кнопка для создания заявки */}
         <button onClick={handleCreateRequest} className="primary-button">Создать</button>
