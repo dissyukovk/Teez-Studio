@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.db.models import Count
-from .models import Product, STRequestProduct, STRequest, Invoice, InvoiceProduct, ProductMoveStatus, ProductOperation, Order, OrderStatus, OrderProduct, ProductCategory, RetouchStatus, STRequestStatus, ProductOperationTypes
+from .models import Product, STRequestProduct, STRequest, Invoice, InvoiceProduct, ProductMoveStatus, ProductOperation, Order, OrderStatus, OrderProduct, ProductCategory, RetouchStatus, STRequestStatus, ProductOperationTypes, UserURLs
 
 class UserSerializer(serializers.ModelSerializer):
     groups = serializers.SerializerMethodField()
@@ -198,3 +198,14 @@ class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCategory
         fields = ['id', 'name', 'reference_link']
+
+class UserURLsSerializer(serializers.ModelSerializer):
+    # Полный вывод информации о пользователе
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+
+    class Meta:
+        model = UserURLs
+        fields = ['user', 'username', 'email', 'first_name', 'last_name', 'income_url', 'outcome_url']

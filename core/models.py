@@ -148,3 +148,11 @@ class ProductOperation(models.Model):
     
     def __str__(self):
         return f"{self.product.barcode} - {self.operation_type.name}"
+
+class UserURLs(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)  # Внешний ключ и основной ключ
+    income_url = models.CharField(max_length=255, blank=True, null=True)  # Поле для входящей ссылки
+    outcome_url = models.CharField(max_length=255, blank=True, null=True)  # Поле для исходящей ссылки
+
+    def __str__(self):
+        return f"{self.user.username} URLs"

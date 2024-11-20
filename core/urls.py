@@ -66,7 +66,8 @@ from .views import (
     RetoucherStatsView,
     ManagerProductStatsView,
     StockmanListView,
-    ReadyPhotosView
+    ReadyPhotosView,
+    UserURLsViewSet
 )
 
 class UserDetailView(APIView):
@@ -89,6 +90,7 @@ router.register(r'strequests', STRequestViewSet, basename='strequest')
 router.register(r'invoices', InvoiceViewSet, basename='invoice')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'operations/crud', ProductOperationCRUDViewSet)
+router.register(r'user-urls', UserURLsViewSet)
 
 urlpatterns = [
     # CRUD операции
