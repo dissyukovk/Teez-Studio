@@ -17,12 +17,12 @@
   }
   
   .barcode-display {
-    width: 40mm;
-    height: 30mm;
+    width: 41mm;
+    height: 25mm;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: auto;
+    margin: 0px;
   }
   
   .print-button {
@@ -46,8 +46,8 @@
   
     .barcode-display {
       margin: 0;
-      width: 40mm;
-      height: 30mm;
+      width: 41mm;
+      height: 25mm;
     }
   
     body * {
