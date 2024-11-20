@@ -84,7 +84,7 @@ const FsOrderTable = () => {
                   <td>{order.assembly_user ? `${order.assembly_user.first_name} ${order.assembly_user.last_name}` : 'Не указан'}</td>
                   <td>{order.assembly_date ? new Date(order.assembly_date).toLocaleString() : 'Не начато'}</td>
                   <td>{order.status ? order.status.name : 'Не указан'}</td>
-                  <td>{order.assembledCount}/{order.totalProducts}</td>
+                  <td>{order.totalProducts}</td>
                   <td>{order.acceptedCount}</td>
                 </tr>
               ))

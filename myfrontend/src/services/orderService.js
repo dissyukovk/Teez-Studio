@@ -6,7 +6,7 @@ const getAuthHeaders = () => {
 };
 
 
-const API_URL = 'http://192.168.6.247:8000/';
+const API_URL = 'http://192.168.6.216:8000/';
 
 const getOrderStatuses = async () => {
   try {

@@ -188,8 +188,6 @@ const OkzOrderView = () => {
               <th>Штрихкод</th>
               <th>Наименование</th>
               <th>Ячейка</th>
-              <th>Статус сборки</th>
-              <th>Время сборки</th>
             </tr>
           </thead>
           <tbody>
@@ -198,10 +196,6 @@ const OkzOrderView = () => {
                 <td>{product.barcode}</td>
                 <td>{product.name}</td>
                 <td>{product.cell}</td>
-                <td style={{ color: product.assembled ? 'green' : 'red' }}>
-                  {product.assembled ? 'Собран' : 'Не собран'}
-                </td>
-                <td>{product.assembled_date ? new Date(product.assembled_date).toLocaleString() : ""}</td>
               </tr>
             ))}
           </tbody>

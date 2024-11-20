@@ -90,6 +90,7 @@ const OrderTable = () => {
               <th onClick={() => handleSort('date')}>Дата создания</th>
               <th onClick={() => handleSort('creator')}>Создатель</th>
               <th onClick={() => handleSort('assembly_user')}>Сотрудник сборки</th>
+              <th>Начало сборки</th>
               <th onClick={() => handleSort('accept_user')}>Сотрудник приемки</th>
               <th onClick={() => handleSort('accept_date')}>Дата приемки</th>
               <th onClick={() => handleSort('status')}>Статус</th>
@@ -107,11 +108,12 @@ const OrderTable = () => {
                   <td>{order.date ? new Date(order.date).toLocaleString() : 'Нет даты'}</td>
                   <td>{order.creator ? `${order.creator.first_name} ${order.creator.last_name}` : 'Не указан'}</td>
                   <td>{order.assembly_user ? `${order.assembly_user.first_name} ${order.assembly_user.last_name}` : 'Не указан'}</td>
+                  <td>{order.assembly_date ? new Date(order.assembly_date).toLocaleString() : 'Не начато'}</td>
                   <td>{order.accept_user ? `${order.accept_user.first_name} ${order.accept_user.last_name}` : 'Не указан'}</td>
                   <td>{order.accept_date ? new Date(order.accept_date).toLocaleString() : 'Нет даты'}</td>
                   <td>{order.status ? order.status.name : 'Не указан'}</td>
-                  <td>{order.assembled_count}/{order.total_products}</td>
-                  <td>{order.accepted_count}/{order.assembled_count}</td>
+                  <td>{order.total_products}</td>
+                  <td>{order.accepted_count}</td>
                 </tr>
               ))
             ) : (

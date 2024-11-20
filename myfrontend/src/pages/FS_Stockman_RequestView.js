@@ -104,10 +104,13 @@ const FSStockmanRequestView = () => {
         <head>
           <title>Печать Заявки</title>
           <style>
-            body { display: flex; flex-direction: column; align-items: center; font-family: Arial, sans-serif; padding: 40px; }
-            .request-details { font-weight: bold; font-size: 18px; margin-bottom: 30px; }
-            .barcodes-list { width: 100%; margin-top: 20px; }
-            .barcode-item { font-size: 12px; margin-bottom: 8px; }
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .request-details { font-weight: bold; font-size: 18px; margin-bottom: 20px; }
+            table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+            table, th, td { border: 1px solid black; }
+            th, td { padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            h3 { margin-bottom: 10px; }
           </style>
         </head>
         <body>
@@ -115,16 +118,39 @@ const FSStockmanRequestView = () => {
             <h2>Заявка №${requestNumber}</h2>
             <p>Статус: ${status}</p>
           </div>
-          <div class="barcodes-list">
+          <div>
             <h3>Товары:</h3>
-            ${barcodes.map(barcode => `<div class="barcode-item">${barcode.barcode} - ${barcode.name} - ${barcode.movementStatus}</div>`).join('')}
+            <table>
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Штрихкод</th>
+                  <th>Наименование</th>
+                  <th>Статус движения</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${barcodes
+                  .map(
+                    (barcode, index) => `
+                      <tr>
+                        <td>${index + 1}</td>
+                        <td>${barcode.barcode}</td>
+                        <td>${barcode.name}</td>
+                        <td>${barcode.movementStatus}</td>
+                      </tr>
+                    `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
           </div>
         </body>
       </html>
     `);
     printWindow.document.close();
     printWindow.print();
-  };
+  };  
 
   return (
     <div className="fs-request-view">
@@ -132,8 +158,9 @@ const FSStockmanRequestView = () => {
       {/* <p>Статус: {status} <button onClick={handleStatusUpdate} className="status-update-btn">Создать</button></p> */}
 
       <table className="styled-table">
-        <thead>
+      <thead>
           <tr>
+            <th>№</th>
             <th>Штрихкод</th>
             <th>Наименование</th>
             <th>Статус движения</th>
@@ -141,8 +168,9 @@ const FSStockmanRequestView = () => {
           </tr>
         </thead>
         <tbody>
-          {barcodes.map(barcode => (
+          {barcodes.map((barcode, index) => (
             <tr key={barcode.barcode}>
+              <td>{index + 1}</td>
               <td>{barcode.barcode}</td>
               <td>{barcode.name}</td>
               <td>{barcode.movementStatus}</td>
