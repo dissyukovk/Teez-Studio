@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import invoiceService from '../services/invoiceService';
+import * as XLSX from 'xlsx'; // Для работы с Excel
 import './InvoiceView.css';
 
 const InvoiceView = () => {
@@ -36,7 +37,7 @@ const InvoiceView = () => {
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     const printContent = document.getElementById('invoice-content').innerHTML;
-  
+
     printWindow.document.open();
     printWindow.document.write(`
       <html>
@@ -55,11 +56,28 @@ const InvoiceView = () => {
       </html>
     `);
     printWindow.document.close();
-  
+
     printWindow.onload = () => {
       printWindow.print();
       printWindow.close();
     };
+  };
+
+  const handleDownloadExcel = () => {
+    if (!invoice) return;
+
+    const worksheetData = invoice.products.map(product => ({
+      'Штрихкод': product.barcode,
+      'Наименование товара': product.name,
+      'Количество': 1,
+      'Ячейка': product.cell || 'Не указана',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Накладная');
+    
+    XLSX.writeFile(workbook, `Накладная №${invoiceNumber}.xlsx`);
   };
 
   if (loading) return <div>Загрузка...</div>;
@@ -67,10 +85,13 @@ const InvoiceView = () => {
 
   return (
     <div className="invoice-view">
-      <button className="print-button" onClick={handlePrint}>Печать</button>
+      <div className="button-container">
+        <button className="print-button" onClick={handlePrint}>Печать</button>
+        <button className="download-excel-button" onClick={handleDownloadExcel}>Скачать Excel</button>
+      </div>
       <div id="invoice-content">
         <h1>Накладная № {invoiceNumber}</h1>
-        <p>Дата создания: {invoice?.date || 'Не указана'}</p>
+        <p>Дата создания: {invoice?.date ? new Date(invoice?.date).toLocaleString() : 'Нет даты'}</p>
         <table className="invoice-products-table">
           <thead>
             <tr>

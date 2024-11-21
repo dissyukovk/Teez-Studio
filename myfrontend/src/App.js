@@ -65,7 +65,7 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/" element={isAuthenticated ? <HomePage user={user} /> : <Navigate to="/login" />} />
         <Route path="/products" element={isAuthenticated ? <ProductTable /> : <Navigate to="/login" />} />
         <Route path="/requests" element={isAuthenticated ? <Requests /> : <Navigate to="/login" />} />
-        <Route path="/invoices" element={isAuthenticated ? <Invoices /> : <Navigate to="/login" />} />
+        <Route path="/invoices" element={<Invoices />} />
         <Route path="/invoices/:invoiceNumber" element={<InvoiceView />} />
         <Route path="/admin-products" element={isAuthenticated ? <AdminProducts /> : <Navigate to="/login" />} />
         <Route path="/orders" element={isAuthenticated ? <OrderTable /> : <Navigate to="/login" />} />
