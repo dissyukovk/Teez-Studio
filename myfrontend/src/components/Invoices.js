@@ -8,14 +8,23 @@ const Invoices = () => {
   const [paginationInfo, setPaginationInfo] = useState({});
   const [searchInvoiceNumber, setSearchInvoiceNumber] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
+  const [searchQuery, setSearchQuery] = useState({ invoiceNumber: '', barcode: '' });
+  const [sortField, setSortField] = useState('date'); // Поле для сортировки по умолчанию
+  const [sortOrder, setSortOrder] = useState('desc'); // Сортировка от позднего к раннему
 
   const openInvoiceDetails = (invoiceNumber) => {
     window.open(`/invoices/${invoiceNumber}`, '_blank');
   };
-  
+
   const fetchInvoices = useCallback(async (page = 1) => {
     try {
-      const data = await invoiceService.getInvoices(searchInvoiceNumber, searchBarcode, '', 'asc', page);
+      const data = await invoiceService.getInvoices(
+        searchQuery.invoiceNumber,
+        searchQuery.barcode,
+        sortField,
+        sortOrder,
+        page
+      );
       setInvoices(data.results);
       setPaginationInfo({
         next: data.next,
@@ -25,15 +34,30 @@ const Invoices = () => {
     } catch (error) {
       console.error('Ошибка при получении накладных:', error);
     }
-  }, [searchInvoiceNumber, searchBarcode]);
+  }, [searchQuery, sortField, sortOrder]);
 
   useEffect(() => {
     fetchInvoices(currentPage);
   }, [currentPage, fetchInvoices]);
 
-  // Обработчик для смены страницы
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
+  };
+
+  const handleSearch = () => {
+    setSearchQuery({
+      invoiceNumber: searchInvoiceNumber,
+      barcode: searchBarcode,
+    });
+    setCurrentPage(1); // Сбрасываем на первую страницу
+  };
+
+  const handleSort = (field) => {
+    // Меняем порядок сортировки, если поле совпадает
+    const newSortOrder = sortField === field && sortOrder === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortOrder(newSortOrder);
+    setCurrentPage(1); // Сбрасываем на первую страницу
   };
 
   return (
@@ -52,14 +76,18 @@ const Invoices = () => {
           value={searchBarcode}
           onChange={(e) => setSearchBarcode(e.target.value)}
         />
-        <button onClick={() => fetchInvoices(1)}>Поиск</button>
+        <button onClick={handleSearch}>Поиск</button>
       </div>
       <div className="table-container">
         <table className="invoices-table">
           <thead>
             <tr>
-              <th>Номер накладной</th>
-              <th>Дата</th>
+              <th onClick={() => handleSort('InvoiceNumber')} style={{ cursor: 'pointer' }}>
+                Номер накладной {sortField === 'InvoiceNumber' && (sortOrder === 'asc' ? '▲' : '▼')}
+              </th>
+              <th onClick={() => handleSort('date')} style={{ cursor: 'pointer' }}>
+                Дата {sortField === 'date' && (sortOrder === 'asc' ? '▲' : '▼')}
+              </th>
               <th>Товаровед</th>
               <th>Количество товаров</th>
             </tr>
