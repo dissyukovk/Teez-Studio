@@ -115,11 +115,10 @@ const CreateRequestModal = ({ closeModal }) => {
             </tbody>
           </table>
         </div>
-
-
-        {/* Кнопка для создания заявки */}
-        <button onClick={handleCreateRequest} className="primary-button">Создать</button>
-        <button onClick={closeModal} className="secondary-button">Закрыть</button>
+          <div className="button-group">
+            <button onClick={handleCreateRequest} className="primary-button">Создать</button>
+            <button onClick={closeModal} className="secondary-button">Закрыть</button>
+          </div>
       </div>
     </div>
   );

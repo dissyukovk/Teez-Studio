@@ -15,7 +15,11 @@
     padding: 20px;
     border-radius: 5px;
     width: 500px;
-  }
+    max-height: 70vh; /* Ограничиваем высоту до 70% высоты окна */
+    overflow: hidden; /* Прячем переполнение по вертикали */
+    display: flex;
+    flex-direction: column; /* Выстраиваем элементы по вертикали */
+  }  
   
   h2 {
     margin-bottom: 15px;
@@ -40,7 +44,9 @@
   
   .scanned-barcodes-table {
     margin-top: 20px;
-  }
+    flex-grow: 1; /* Позволяет таблице занимать доступное пространство */
+    overflow-y: auto; /* Добавляем вертикальную прокрутку */
+  }  
   
   .scanned-barcodes-table table {
     width: 100%;
@@ -59,5 +65,11 @@
   .error-message {
     color: red;
     margin-top: 10px;
+  }
+  
+  .button-group {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end; /* Выравниваем кнопки по правому краю */
   }
   
