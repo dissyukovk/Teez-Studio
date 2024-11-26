@@ -108,7 +108,7 @@ const CurrentProductsFS = () => {
               <th onClick={() => handleSort('name')}>Наименование</th>
               <th onClick={() => handleSort('cell')}>Ячейка</th>
               <th onClick={() => handleSort('move_status')}>Статус движения</th>
-              <th>Заявка</th> {/* Добавлено новое поле */}
+              <th onClick={() => handleSort('request_number')}>Заявка</th>
             </tr>
           </thead>
           <tbody>

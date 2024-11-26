@@ -1,0 +1,1 @@
+celery -A myproject beat --loglevel=info
