@@ -97,6 +97,7 @@ const InvoiceView = () => {
             <tr>
               <th>Штрихкод</th>
               <th>Наименование товара</th>
+              <th>Заявка</th> {/* Новый столбец */}
               <th>Количество</th>
               <th>Ячейка</th>
             </tr>
@@ -106,6 +107,7 @@ const InvoiceView = () => {
               <tr key={product.barcode}>
                 <td>{product.barcode}</td>
                 <td>{product.name}</td>
+                <td>{product.request_number || 'N/A'}</td> {/* Отображение номера заявки */}
                 <td>1</td>
                 <td>{product.cell || 'Не указана'}</td>
               </tr>

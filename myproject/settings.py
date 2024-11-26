@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'debug_toolbar',
+    'django_celery_results',
+    'django_celery_beat',
 ]
 
 REST_FRAMEWORK = {
@@ -174,4 +176,13 @@ LOGGING = {
 INTERNAL_IPS = [
     '127.0.0.1',
 ]
+
+# Настройка Celery
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
 

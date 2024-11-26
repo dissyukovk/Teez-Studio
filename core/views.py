@@ -17,7 +17,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer, UserURLsSerializer
 from django.db import transaction, IntegrityError
-from django.db.models import Count, Max, F, Value, Q, Sum
+from django.db.models import Count, Max, F, Value, Q, Sum, OuterRef, Subquery
 from django.db.models.functions import Concat
 from django.utils import timezone
 import logging
@@ -257,10 +257,15 @@ def user_list(request):
     return paginator.get_paginated_response(serializer.data)
 
 
-# Фильтрация для Product
 @api_view(['GET'])
 def product_list(request):
-    products = Product.objects.select_related('category', 'move_status').all()
+    products = Product.objects.select_related('category', 'move_status').annotate(
+        request_number=Subquery(
+            STRequestProduct.objects.filter(product=OuterRef('pk'))
+            .order_by('-id')
+            .values('request__RequestNumber')[:1]
+        )
+    )
 
     # Get filtering parameters
     barcode = request.query_params.get('barcode', None)
@@ -1219,18 +1224,27 @@ def get_invoice_details(request, invoice_number):
         # Получаем накладную по номеру
         invoice = Invoice.objects.get(InvoiceNumber=invoice_number)
         
-        # Получаем связанные продукты накладной
-        products = InvoiceProduct.objects.filter(invoice=invoice)
-        products_data = [
-            {
+        # Получаем связанные продукты накладной с предварительной загрузкой заявок
+        products = InvoiceProduct.objects.filter(invoice=invoice).prefetch_related(
+            'product__strequestproduct_set__request'
+        )
+
+        # Формируем данные о продуктах
+        products_data = []
+        for product in products:
+            # Получаем последнюю заявку для продукта
+            request_product = product.product.strequestproduct_set.order_by('-id').first()
+            request_number = request_product.request.RequestNumber if request_product and request_product.request else "N/A"
+
+            products_data.append({
                 'barcode': product.product.barcode,
                 'name': product.product.name,
+                'request_number': request_number,  # Добавляем номер заявки
                 'quantity': 1,
                 'cell': product.product.cell
-            }
-            for product in products
-        ]
+            })
         
+        # Формируем данные накладной
         invoice_data = {
             'InvoiceNumber': invoice.InvoiceNumber,
             'date': invoice.date,
@@ -1744,15 +1758,23 @@ class ManagerProductStatsView(APIView):
             date__date=selected_date
         ).count()
 
+        # Accepted products without requests for the selected date
+        accepted_without_request = ProductOperation.objects.filter(
+            operation_type=3,  # Accepted
+            date__date=selected_date
+        ).exclude(product__strequestproduct__isnull=False).count()
+
         # Construct response data
         stats = {
             "ordered": ordered_count['ordered'],
             "accepted": list(accepted),
             "shipped": list(shipped),
-            "defective": defective_count
+            "defective": defective_count,
+            "accepted_without_request": accepted_without_request
         }
 
         return Response(stats)
+
 
 class StockmanListView(APIView):
     permission_classes = [IsAuthenticated]
