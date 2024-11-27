@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.db.models import Count
-from .models import Product, STRequestProduct, STRequest, Invoice, InvoiceProduct, ProductMoveStatus, ProductOperation, Order, OrderStatus, OrderProduct, ProductCategory, RetouchStatus, STRequestStatus, ProductOperationTypes, UserURLs
+from .models import Product, STRequestProduct, STRequest, Invoice, InvoiceProduct, ProductMoveStatus, ProductOperation, Order, OrderStatus, OrderProduct, ProductCategory, RetouchStatus, STRequestStatus, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations
 
 class UserSerializer(serializers.ModelSerializer):
     groups = serializers.SerializerMethodField()
@@ -209,3 +209,19 @@ class UserURLsSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserURLs
         fields = ['user', 'username', 'email', 'first_name', 'last_name', 'income_url', 'outcome_url']
+
+# Сериализатор для STRequestHistoryOperations
+class STRequestHistoryOperationsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = STRequestHistoryOperations
+        fields = '__all__'
+
+class STRequestHistorySerializer(serializers.ModelSerializer):
+    st_request = serializers.StringRelatedField()  # Для отображения номера заявки
+    product = serializers.StringRelatedField()  # Для отображения штрихкода продукта
+    user = UserSerializer()  # Используем вложенный сериализатор
+    operation = serializers.StringRelatedField()  # Для отображения имени операции
+
+    class Meta:
+        model = STRequestHistory
+        fields = '__all__'

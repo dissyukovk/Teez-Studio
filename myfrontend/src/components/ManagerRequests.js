@@ -135,7 +135,7 @@ const ManagerRequests = () => {
               requests.map((request, index) => (
                 <tr key={`${request.RequestNumber}-${index}`}>
                   <td onClick={() => openModal(request.RequestNumber)}>{request.RequestNumber}</td>
-                  <td>{request.creation_date}</td>
+                  <td>{request.creation_date ? new Date(request.creation_date).toLocaleString() : ""}</td>
                   <td>{request.stockman ? `${request.stockman.first_name} ${request.stockman.last_name}` : 'Не назначен'}</td>
                   <td>{request.photographer_first_name ? `${request.photographer_first_name} ${request.photographer_last_name}` : 'Не назначен'}</td>
                   <td>{request.retoucher_first_name ? `${request.retoucher_first_name} ${request.retoucher_last_name}` : 'Не назначен'}</td>

@@ -267,6 +267,27 @@ const getRetoucherStats = async (date) => {
   }
 };
 
+const getRequestHistory = async ({ page = 1, pageSize = 10, search = '', sortField = 'date', sortOrder = 'desc' }) => {
+  try {
+    const params = {
+      page,
+      page_size: pageSize,
+      search: search || undefined,
+      ordering: sortOrder === 'asc' ? sortField : `-${sortField}`
+    };
+
+    const response = await axios.get(`${API_URL}api/strequest-history/`, {
+      params,
+      headers: getAuthHeaders(),
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching request history:', error);
+    throw error;
+  }
+};
+
 const requestService = {
   getRequests,
   createRequest,
@@ -284,7 +305,8 @@ const requestService = {
   updateRetouchStatusesAndLinks,
   getRequestStatuses,
   getPhotographerStats,
-  getRetoucherStats
+  getRetoucherStats,
+  getRequestHistory
 };
 
 export default requestService;

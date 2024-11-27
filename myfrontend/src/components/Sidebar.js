@@ -148,6 +148,9 @@ function Sidebar({ user }) {
             <li>
               <NavLink to="/invoices" activeClassName="active">Накладные (Отправка)</NavLink>
             </li>
+            <li>
+              <NavLink to="/fs_manager_requesthistory" activeClassName="active">История изменения заявок</NavLink>
+            </li>
           </>
         )}
 

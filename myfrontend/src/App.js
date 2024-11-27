@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import 'antd/dist/reset.css';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import ProductTable from './components/ProductTable';
@@ -37,6 +38,7 @@ import OkzOrderView from './pages/okz_OrderView';
 import FsOrderTable from './components/fs_OrderTable';
 import FsOrderView from './pages/fs_OrderView';
 import FSStockmanRequestView from './pages/FS_Stockman_RequestView';
+import FsManagerRequestHistory from './pages/fs_manager_requesthistory';
 
 const AppContent = ({ isAuthenticated, user }) => {
   const location = useLocation();
@@ -96,6 +98,7 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/fs_list" element={isAuthenticated ? <FsOrderTable /> : <Navigate to="/login" />} />
         <Route path="/fs_orders/:orderNumber" element={isAuthenticated ? <FsOrderView /> : <Navigate to="/login" />} />
         <Route path="/fs_stockman_requestview/:requestNumber" element={isAuthenticated ? <FSStockmanRequestView /> : <Navigate to="/login" />} />
+        <Route path="/fs_manager_requesthistory" element={isAuthenticated ? <FsManagerRequestHistory /> : <Navigate to="/login" />} />
       </Routes>
     </div>
   );  

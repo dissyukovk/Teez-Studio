@@ -11,6 +11,7 @@ const FSStockmanRequestView = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [addedBarcodes, setAddedBarcodes] = useState([]);
   const [removedBarcodes, setRemovedBarcodes] = useState([]);
+  const [isPrintDisabled, setIsPrintDisabled] = useState(false); // New state for disabling print button
   const barcodeInputRef = useRef(null); // Reference for the hidden input
 
   useEffect(() => {
@@ -20,11 +21,16 @@ const FSStockmanRequestView = () => {
           setBarcodes(response.barcodes);
           setStatus(response.status);
         })
-        .catch(error => {
+        .catch(() => {
           setErrorMessage('Ошибка при получении данных заявки');
         });
     }
   }, [requestNumber]);
+
+  useEffect(() => {
+    // Disable print button if there are unsaved changes
+    setIsPrintDisabled(addedBarcodes.length > 0 || removedBarcodes.length > 0);
+  }, [addedBarcodes, removedBarcodes]);
 
   const handleRemoveBarcode = (barcodeToRemove) => {
     setBarcodes(prevBarcodes => prevBarcodes.filter(barcode => barcode.barcode !== barcodeToRemove));
@@ -55,7 +61,7 @@ const FSStockmanRequestView = () => {
         ]);
         setErrorMessage('');
       })
-      .catch(error => {
+      .catch(() => {
         setErrorMessage('Ошибка при получении данных штрихкода');
       });
   };
@@ -82,18 +88,10 @@ const FSStockmanRequestView = () => {
       alert('Товары успешно сохранены в заявке!');
       setAddedBarcodes([]);
       setRemovedBarcodes([]);
-    } catch (error) {
+      setIsPrintDisabled(false); // Enable print button after saving
+    } catch {
       setErrorMessage('Ошибка при сохранении изменений');
       alert('Ошибка при сохранении товаров. Попробуйте еще раз.');
-    }
-  };
-  
-  const handleStatusUpdate = async () => {
-    try {
-      await requestService.updateRequestStatus(requestNumber, 2); // Update status to "Создана"
-      setStatus('Создана'); // Update status in UI
-    } catch (error) {
-      setErrorMessage('Ошибка при обновлении статуса');
     }
   };
 
@@ -150,15 +148,13 @@ const FSStockmanRequestView = () => {
     `);
     printWindow.document.close();
     printWindow.print();
-  };  
+  };
 
   return (
     <div className="fs-request-view">
       <h2>Заявка №{requestNumber}</h2>
-      {/* <p>Статус: {status} <button onClick={handleStatusUpdate} className="status-update-btn">Создать</button></p> */}
-
       <table className="styled-table">
-      <thead>
+        <thead>
           <tr>
             <th>№</th>
             <th>Штрихкод</th>
@@ -196,7 +192,13 @@ const FSStockmanRequestView = () => {
         <form onSubmit={handleSave}>
           <button type="submit" className="save-btn">СОХРАНИТЬ</button>
         </form>
-        <button className="print-btn" onClick={handlePrint}>ПЕЧАТЬ</button>
+        <button
+          className="print-btn"
+          onClick={handlePrint}
+          disabled={isPrintDisabled} // Disable print button when changes are not saved
+        >
+          ПЕЧАТЬ
+        </button>
       </div>
     </div>
   );

@@ -67,7 +67,8 @@ from .views import (
     ManagerProductStatsView,
     StockmanListView,
     ReadyPhotosView,
-    UserURLsViewSet
+    UserURLsViewSet,
+    STRequestHistoryViewSet
 )
 
 class UserDetailView(APIView):
@@ -91,6 +92,7 @@ router.register(r'invoices', InvoiceViewSet, basename='invoice')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'operations/crud', ProductOperationCRUDViewSet)
 router.register(r'user-urls', UserURLsViewSet)
+router.register('strequest-history', STRequestHistoryViewSet)
 
 urlpatterns = [
     # CRUD операции
@@ -116,7 +118,7 @@ urlpatterns = [
     path('public/defect-operations/', defect_operations_list, name='defect-operations-list'),
     path('api/photographer-stats/', PhotographerStatsView.as_view(), name='photographer-stats'),
     path('api/retoucher-stats/', RetoucherStatsView.as_view(), name='retouch-stats'),
-    
+    path('', include(router.urls)),
 
     # Основные API
     path('api/products/', product_list, name='product-list'),

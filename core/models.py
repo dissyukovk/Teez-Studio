@@ -156,3 +156,25 @@ class UserURLs(models.Model):
 
     def __str__(self):
         return f"{self.user.username} URLs"
+
+# Типы операций для истории операций с заявками
+class STRequestHistoryOperations(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+# История операций с заявками
+class STRequestHistory(models.Model):
+    st_request = models.ForeignKey('STRequest', on_delete=models.CASCADE, related_name='history')  # ForeignKey на заявку
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='request_history', blank=True, null=True)  # ForeignKey на продукт
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='request_operations')  # ForeignKey на пользователя
+    date = models.DateTimeField(auto_now_add=True)  # Штамп даты и времени
+    operation = models.ForeignKey(STRequestHistoryOperations, on_delete=models.SET_NULL, null=True, related_name='request_histories')  # ForeignKey на тип операции
+
+    class Meta:
+        ordering = ['-date']  # Сортировка по дате (новейшие записи первыми)
+
+    def __str__(self):
+        return f"Request: {self.st_request.RequestNumber}, Product: {self.product.barcode}, Operation: {self.operation.name}"

@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import STRequest, Product, Invoice, ProductMoveStatus, ProductCategory, Product, Order, OrderProduct, OrderStatus, STRequestProduct, ProductOperation, ProductOperationTypes, InvoiceProduct, RetouchStatus, STRequestStatus, UserURLs
+from .models import STRequest, Product, Invoice, ProductMoveStatus, ProductCategory, Product, Order, OrderProduct, OrderStatus, STRequestProduct, ProductOperation, ProductOperationTypes, InvoiceProduct, RetouchStatus, STRequestStatus, UserURLs, STRequestHistory, STRequestHistoryOperations
 from .forms import STRequestForm
 from django.contrib.auth.decorators import login_required
 from rest_framework import viewsets, status, serializers, generics, permissions
@@ -15,7 +15,7 @@ from django.contrib.auth.models import User, Group
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer, UserURLsSerializer
+from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer, UserURLsSerializer, STRequestHistorySerializer
 from django.db import transaction, IntegrityError
 from django.db.models import Count, Max, F, Value, Q, Sum, OuterRef, Subquery
 from django.db.models.functions import Concat
@@ -493,7 +493,7 @@ def get_requests(request):
     return render(request, 'core/requests_list.html', {'requests': requests})
 
 
-# Создание и редактирование заявок (оставим без изменений)
+# Создание и редактирование заявок
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_request(request):
@@ -518,11 +518,26 @@ def create_request(request):
         status_id=2
     )
 
-    # Связываем товары с заявкой
+    # Получаем тип операции для истории
+    operation_type = STRequestHistoryOperations.objects.filter(id=1).first()
+    if not operation_type:
+        return Response({'error': 'Тип операции с ID=1 не найден'}, status=400)
+
+    # Связываем товары с заявкой и сохраняем историю
     for barcode in barcodes:  # Ожидаем, что `barcodes` содержит список строк
         product = Product.objects.filter(barcode=barcode).first()
         if product:
+            # Создаем связь товара с заявкой
             STRequestProduct.objects.create(request=new_request, product=product)
+
+            # Сохраняем в историю операций
+            STRequestHistory.objects.create(
+                st_request=new_request,
+                product=product,
+                user=user,
+                date=timezone.now(),
+                operation=operation_type
+            )
 
     # Возвращаем ответ с созданной заявкой
     return Response({'status': 'Заявка создана', 'requestNumber': new_request_number})
@@ -808,16 +823,31 @@ def finalize_request(request):
     if not st_request:
         return Response({'error': 'Заявка не найдена'}, status=404)
 
+    # Получаем тип операции для истории
+    operation_type = STRequestHistoryOperations.objects.filter(id=1).first()
+    if not operation_type:
+        return Response({'error': 'Тип операции с ID=1 не найден'}, status=400)
+
     for barcode in barcodes:
         product = Product.objects.filter(barcode=barcode).first()
         if product:
+            # Связываем товар с заявкой
             STRequestProduct.objects.create(request=st_request, product=product)
 
-    st_request.status_id = 2  # Переводим заявку в статус 2
+            # Сохраняем в историю операций
+            STRequestHistory.objects.create(
+                st_request=st_request,
+                product=product,
+                user=request.user,
+                date=timezone.now(),
+                operation=operation_type
+            )
+
+    # Переводим заявку в статус 2
+    st_request.status_id = 2
     st_request.save()
 
     return Response({'message': 'Заявка успешно завершена'})
-
 
 @api_view(['GET'])
 def order_list(request):
@@ -931,14 +961,46 @@ def update_request(request, request_number):
         logger.info(f'Добавляем штрихкоды: {added_barcodes}')
         logger.info(f'Удаляем штрихкоды: {removed_barcodes}')
 
+        # Получаем типы операций
+        add_operation = STRequestHistoryOperations.objects.filter(id=1).first()
+        remove_operation = STRequestHistoryOperations.objects.filter(id=2).first()
+        if not add_operation or not remove_operation:
+            return Response({'error': 'Не найдены типы операций (id=1 или id=2)'}, status=400)
+
+        # Обрабатываем удаление штрихкодов
         if removed_barcodes:
             for barcode in removed_barcodes:
-                STRequestProduct.objects.filter(request=strequest, product__barcode=barcode).delete()
+                # Удаляем связь товара с заявкой
+                product_relation = STRequestProduct.objects.filter(request=strequest, product__barcode=barcode).first()
+                if product_relation:
+                    product = product_relation.product
+                    product_relation.delete()
 
+                    # Сохраняем операцию удаления в историю
+                    STRequestHistory.objects.create(
+                        st_request=strequest,
+                        product=product,
+                        user=request.user,
+                        date=timezone.now(),
+                        operation=remove_operation
+                    )
+                    logger.info(f'Удалён штрихкод {barcode} из заявки {request_number}')
+
+        # Обрабатываем добавление штрихкодов
         if added_barcodes:
             for barcode in added_barcodes:
                 product = Product.objects.get(barcode=barcode)
                 STRequestProduct.objects.create(request=strequest, product=product)
+
+                # Сохраняем операцию добавления в историю
+                STRequestHistory.objects.create(
+                    st_request=strequest,
+                    product=product,
+                    user=request.user,
+                    date=timezone.now(),
+                    operation=add_operation
+                )
+                logger.info(f'Добавлен штрихкод {barcode} в заявку {request_number}')
 
         return Response({'message': 'Request updated successfully'})
 
@@ -948,6 +1010,9 @@ def update_request(request, request_number):
     except Product.DoesNotExist:
         logger.error('Продукт с указанным штрихкодом не найден')
         return Response({'error': 'Product not found'}, status=404)
+    except Exception as e:
+        logger.error(f'Ошибка при обновлении заявки: {str(e)}')
+        return Response({'error': 'Ошибка при обновлении заявки'}, status=500)
 
 @api_view(['POST'])
 def update_request_status(request, request_number):
@@ -1977,3 +2042,30 @@ def mark_as_opened(request):
 class UserURLsViewSet(ModelViewSet):
     queryset = UserURLs.objects.all()
     serializer_class = UserURLsSerializer
+
+# ViewSet для STRequestHistory
+class STRequestHistoryViewSet(ModelViewSet):
+    queryset = STRequestHistory.objects.select_related('st_request', 'product', 'user', 'operation').all()
+    serializer_class = STRequestHistorySerializer
+    pagination_class = ProductHistoryPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+
+    # Настройка фильтров
+    filterset_fields = {
+        'st_request__RequestNumber': ['exact'],  # Фильтр по номеру заявки
+        'product__barcode': ['exact'],          # Фильтр по штрихкоду
+        'user__id': ['exact'],                  # Фильтр по ID пользователя
+        'operation__id': ['exact'],             # Фильтр по ID операции
+        'date': ['gte', 'lte'],                 # Фильтр по дате (больше/меньше)
+    }
+    search_fields = [
+        'st_request__RequestNumber',            # Поиск по номеру заявки
+        'product__barcode',
+        'product__name',                        # Поиск по наименованию продукта
+        'user__first_name',                     # Поиск по имени пользователя
+        'user__last_name',                      # Поиск по фамилии пользователя
+        'user__username',                       # Поиск по username пользователя
+        'operation__name'                       # Поиск по названию операции
+    ]
+    ordering_fields = ['date', 'st_request__RequestNumber', 'product__barcode', 'user__username', 'operation__name']
+    ordering = ['-date']  # Сортировка по умолчанию

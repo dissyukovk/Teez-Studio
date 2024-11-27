@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs
+from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations
 
 # Admin for STRequestStatus
 @admin.register(STRequestStatus)
@@ -101,3 +101,14 @@ class ProductOperationTypesAdmin(admin.ModelAdmin):
 @admin.register(UserURLs)
 class UserURLsAdmin(admin.ModelAdmin):
     list_display = ('user', 'income_url', 'outcome_url')
+
+@admin.register(STRequestHistoryOperations)
+class STRequestHistoryOperationsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    search_fields = ('id', 'name',)
+
+@admin.register(STRequestHistory)
+class STRequestHistoryAdmin(admin.ModelAdmin):
+    list_display = ('st_request', 'product', 'user', 'date', 'operation')
+    search_fields = ('st_request__RequestNumber', 'product__barcode', 'user__username', 'operation__name')
+    list_filter = ('operation', 'date')

@@ -22,43 +22,40 @@ CREDENTIALS_FILE = os.path.join(BASE_DIR, 'credentials.json')  # Абсолют�
 def export_daily_stats():
     logger.info("Запуск задачи export_daily_stats")
     today = datetime.now().date()
+    yesterday = today - timedelta(days=1)
 
     try:
-        # Собираем статистику по операциям
-        accepted = ProductOperation.objects.filter(
-            operation_type=3, date__date=today).count()
-        shipped = ProductOperation.objects.filter(
-            operation_type=4, date__date=today).count()
-        defective = ProductOperation.objects.filter(
-            operation_type=25, date__date=today).count()
+        def get_stats_for_date(date):
+            """Получение статистики за указанную дату"""
+            accepted = ProductOperation.objects.filter(
+                operation_type=3, date__date=date).count()
+            shipped = ProductOperation.objects.filter(
+                operation_type=4, date__date=date).count()
+            defective = ProductOperation.objects.filter(
+                operation_type=25, date__date=date).count()
+            accepted_without_request = ProductOperation.objects.filter(
+                operation_type=3, date__date=date
+            ).exclude(product__strequestproduct__isnull=False).count()
+            photo_count = STRequestProduct.objects.filter(
+                request__status_id__in=[5, 6, 7, 8, 9],
+                request__photo_date__date=date
+            ).count()
+            retouch_count = STRequestProduct.objects.filter(
+                request__status_id__in=[8, 9],
+                request__retouch_date__date=date
+            ).count()
+            return [
+                date.strftime('%d.%m.%Y'),
+                accepted,
+                shipped,
+                defective,
+                accepted_without_request,
+                photo_count,
+                retouch_count,
+            ]
 
-        accepted_without_request = ProductOperation.objects.filter(
-            operation_type=3, date__date=today
-        ).exclude(product__strequestproduct__isnull=False).count()
-
-        # Подсчёт количества товаров в заявках через JOIN
-        photo_count = STRequestProduct.objects.filter(
-            request__status_id__in=[5, 6, 7, 8, 9],
-            request__photo_date__date=today
-        ).count()
-
-        retouch_count = STRequestProduct.objects.filter(
-            request__status_id__in=[8, 9],
-            request__retouch_date__date=today
-        ).count()
-
-        # Формируем данные для записи
-        data = [
-            today.strftime('%d.%m.%Y'),
-            accepted,
-            shipped,
-            defective,
-            accepted_without_request,
-            photo_count,
-            retouch_count,
-        ]
-
-        logger.debug(f"Данные для записи: {data}")
+        # Получаем статистику за обе даты
+        stats = [get_stats_for_date(yesterday), get_stats_for_date(today)]
 
         # Авторизация в Google Sheets
         creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
@@ -71,41 +68,40 @@ def export_daily_stats():
             spreadsheetId=SPREADSHEET_ID,
             range=f'{SHEET_NAME}!A:G'  # Диапазон столбцов, куда записываются данные
         ).execute()
-
         rows = sheet_data.get('values', [])
 
-        # Проверяем, есть ли строка с текущей датой
-        row_index = next(
-            (i for i, row in enumerate(rows) if row and row[0] == today.strftime('%d.%m.%Y')),
-            None
-        )
+        for data in stats:
+            date_str = data[0]
+            row_index = next(
+                (i for i, row in enumerate(rows) if row and row[0] == date_str),
+                None
+            )
 
-        if row_index is not None:
-            # Обновляем строку
-            range_name = f'{SHEET_NAME}!A{row_index + 1}:G{row_index + 1}'
-            body = {'values': [data]}
-            service.spreadsheets().values().update(
-                spreadsheetId=SPREADSHEET_ID,
-                range=range_name,
-                valueInputOption='RAW',
-                body=body
-            ).execute()
-            logger.info(f"Строка с датой {today.strftime('%d.%m.%Y')} обновлена.")
-        else:
-            # Добавляем новую строку
-            range_name = f'{SHEET_NAME}!A1'
-            body = {'values': [data]}
-            service.spreadsheets().values().append(
-                spreadsheetId=SPREADSHEET_ID,
-                range=range_name,
-                valueInputOption='RAW',
-                insertDataOption='INSERT_ROWS',
-                body=body
-            ).execute()
-            logger.info(f"Добавлена новая строка с датой {today.strftime('%d.%m.%Y')}.")
+            if row_index is not None:
+                # Обновляем строку
+                range_name = f'{SHEET_NAME}!A{row_index + 1}:G{row_index + 1}'
+                body = {'values': [data]}
+                service.spreadsheets().values().update(
+                    spreadsheetId=SPREADSHEET_ID,
+                    range=range_name,
+                    valueInputOption='RAW',
+                    body=body
+                ).execute()
+                logger.info(f"Строка с датой {date_str} обновлена.")
+            else:
+                # Добавляем новую строку
+                range_name = f'{SHEET_NAME}!A1'
+                body = {'values': [data]}
+                service.spreadsheets().values().append(
+                    spreadsheetId=SPREADSHEET_ID,
+                    range=range_name,
+                    valueInputOption='RAW',
+                    insertDataOption='INSERT_ROWS',
+                    body=body
+                ).execute()
+                logger.info(f"Добавлена новая строка с датой {date_str}.")
 
         print("Экспорт данных выполнен!")
     except Exception as e:
         logger.error(f"Ошибка при экспорте данных: {e}")
         raise e
-
