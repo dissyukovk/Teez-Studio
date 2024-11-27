@@ -24,7 +24,7 @@ app.conf.beat_schedule = {
     },
     'export-tvd-stats': {
         'task': 'core.tasks.export_tvd_stats',
-        'schedule': 1200.0,  # Every 24 hours (daily)
+        'schedule': 1200.0, 
     },
 }
 
