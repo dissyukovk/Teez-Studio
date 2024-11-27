@@ -1,1 +1,1 @@
-celery -A myproject beat --loglevel=info
+celery -A myproject beat --loglevel=info --max-interval=1200

@@ -2,7 +2,7 @@ import os
 from celery import shared_task
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db.models import Sum, F  # Импорт Sum
 from core.models import ProductOperation, STRequest, STRequestProduct  # Импорт моделей
 import logging
@@ -104,4 +104,120 @@ def export_daily_stats():
         print("Экспорт данных выполнен!")
     except Exception as e:
         logger.error(f"Ошибка при экспорте данных: {e}")
+        raise e
+
+@shared_task
+def export_tvd_stats():
+    logger.info("Starting export_tvd_stats task")
+
+    try:
+        today = datetime.now().date()
+
+        # Get active stockmen
+        stockman_group = Group.objects.filter(name="Товаровед").first()
+        if not stockman_group:
+            logger.error("Group 'Товаровед' not found")
+            return
+
+        active_stockmen = User.objects.filter(
+            groups=stockman_group,
+            is_active=True
+        ).values('id', 'first_name', 'last_name')
+
+        # Collect statistics for each stockman
+        stats = []
+        for stockman in active_stockmen:
+            user_id = stockman['id']
+            full_name = f"{stockman['first_name']} {stockman['last_name']}"
+
+            accepted = ProductOperation.objects.filter(
+                operation_type=3, user_id=user_id, date__date=today
+            ).count()
+            accepted_without_request = ProductOperation.objects.filter(
+                operation_type=3, user_id=user_id, date__date=today
+            ).exclude(product__strequestproduct__isnull=False).count()
+            shipped = ProductOperation.objects.filter(
+                operation_type=4, user_id=user_id, date__date=today
+            ).count()
+            defective = ProductOperation.objects.filter(
+                operation_type=25, user_id=user_id, date__date=today
+            ).count()
+            added_to_requests = STRequestHistory.objects.filter(
+                operation_id=1, user_id=user_id, date__date=today
+            ).count()
+            removed_from_requests = STRequestHistory.objects.filter(
+                operation_id=2, user_id=user_id, date__date=today
+            ).count()
+
+            stats.append([
+                today.strftime('%d.%m.%Y'),
+                full_name,
+                accepted,
+                accepted_without_request,
+                shipped,
+                defective,
+                removed_from_requests,
+                added_to_requests,
+            ])
+
+        # Add a total row
+        total_stats = [
+            today.strftime('%d.%m.%Y'),
+            "ИТОГО",
+            sum(stat[2] for stat in stats),
+            sum(stat[3] for stat in stats),
+            sum(stat[4] for stat in stats),
+            sum(stat[5] for stat in stats),
+            sum(stat[6] for stat in stats),
+            sum(stat[7] for stat in stats),
+        ]
+        stats.append(total_stats)
+
+        # Authorize and access Google Sheets
+        creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
+        service = build('sheets', 'v4', credentials=creds)
+
+        # Fetch existing data
+        sheet_data = service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range=f'{TVD_SHEET_NAME}!A:H'
+        ).execute()
+        rows = sheet_data.get('values', [])
+
+        # Update or append rows
+        for data in stats:
+            date_str, name = data[0], data[1]
+            row_index = next(
+                (i for i, row in enumerate(rows)
+                 if row and row[0] == date_str and row[1] == name),
+                None
+            )
+
+            if row_index is not None:
+                # Update existing row
+                range_name = f'{TVD_SHEET_NAME}!A{row_index + 1}:H{row_index + 1}'
+                body = {'values': [data]}
+                service.spreadsheets().values().update(
+                    spreadsheetId=SPREADSHEET_ID,
+                    range=range_name,
+                    valueInputOption='RAW',
+                    body=body
+                ).execute()
+                logger.info(f"Updated row for {name} on {date_str}")
+            else:
+                # Append new row
+                range_name = f'{TVD_SHEET_NAME}!A1'
+                body = {'values': [data]}
+                service.spreadsheets().values().append(
+                    spreadsheetId=SPREADSHEET_ID,
+                    range=range_name,
+                    valueInputOption='RAW',
+                    insertDataOption='INSERT_ROWS',
+                    body=body
+                ).execute()
+                logger.info(f"Added new row for {name} on {date_str}")
+
+        logger.info("TVD statistics exported successfully")
+    except Exception as e:
+        logger.error(f"Error in export_tvd_stats: {e}")
         raise e

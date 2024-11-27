@@ -49,8 +49,6 @@ class CategoryPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 50  # Max page size for user
 
-
-
 # CRUD для пользователей (User) с фильтрацией и сортировкой
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -1539,7 +1537,6 @@ def move_statuses(request):
 
 # View for Stockmen Users
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def stockman_list(request):
     stockman_group = Group.objects.filter(name="Товаровед").first()
     if not stockman_group:
