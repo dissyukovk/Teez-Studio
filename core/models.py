@@ -64,6 +64,8 @@ class STRequestProduct(models.Model):
     request = models.ForeignKey(STRequest, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     retouch_status = models.ForeignKey('RetouchStatus', on_delete=models.SET_NULL, blank=True, null=True)
+    photo_status = models.ForeignKey('PhotoStatus', on_delete=models.SET_NULL, blank=True, null=True)
+    photos_link = models.TextField(blank=True, null=True)
 
     class Meta:
         ordering = ['product__barcode']  # Сортировка по штрихкоду продукта
@@ -129,6 +131,13 @@ class RetouchStatus(models.Model):
     def __str__(self):
         return self.name
 
+class PhotoStatus(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
 # Типы операций
 class ProductOperationTypes(models.Model):
     id = models.IntegerField(primary_key=True)  # ID операций задаете самостоятельно
@@ -178,3 +187,11 @@ class STRequestHistory(models.Model):
 
     def __str__(self):
         return f"Request: {self.st_request.RequestNumber}, Product: {self.product.barcode}, Operation: {self.operation.name}"
+
+# Типы операций для истории операций с заявками
+class Camera(models.Model):
+    id = models.IntegerField(primary_key=True)
+    IP = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"Camera {self.id} - {self.IP}"
