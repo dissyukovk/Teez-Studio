@@ -187,3 +187,11 @@ class STRequestHistory(models.Model):
 
     def __str__(self):
         return f"Request: {self.st_request.RequestNumber}, Product: {self.product.barcode}, Operation: {self.operation.name}"
+
+# Типы операций для истории операций с заявками
+class Camera(models.Model):
+    id = models.IntegerField(primary_key=True)
+    IP = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"Camera {self.id} - {self.IP}"
