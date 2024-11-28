@@ -4,13 +4,15 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 from django.db.models import Sum, F  # Импорт Sum
-from core.models import ProductOperation, STRequest, STRequestProduct  # Импорт моделей
+from django.contrib.auth.models import User, Group
+from core.models import ProductOperation, STRequest, STRequestProduct, STRequestHistory  # Импорт моделей
 import logging
 logger = logging.getLogger(__name__)
 
 # ID Google Таблицы
 SPREADSHEET_ID = '11K7jqTTmo_dmtqAGU3DKaBo8i8yPNKz8Ml4Wba7weRI'
 SHEET_NAME = 'MAIN'
+TVD_SHEET_NAME = 'TVD'
 
 # Настройки доступа к Google Sheets API
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
