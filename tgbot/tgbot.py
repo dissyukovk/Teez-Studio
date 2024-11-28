@@ -2,6 +2,7 @@ import telebot
 import gspread
 import schedule
 import time
+import threading
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 
@@ -78,72 +79,22 @@ def send_stats(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Произошла ошибка: {str(e)}")
 
-# Функция для получения данных сотрудников с листа TVD
-def get_tvd_data(date_str):
-    try:
-        # Открываем конкретно лист TVD
-        tvd_sheet = client.open_by_key(SHEET_ID).worksheet('TVD')
-        data = tvd_sheet.get_all_values()
-        headers = data[0]
-        rows = data[1:]
-
-        # Ищем строки с указанной датой
-        response = [f"*Данные товародвижения за {date_str}:*\n"]
-        for row in rows:
-            if row[0] == date_str:
-                # Проверяем, что все числовые значения не равны 0
-                stats = list(map(int, row[2:]))
-                if all(value == 0 for value in stats):
-                    continue  # Пропускаем строки, где все значения равны 0
-
-                response.append(
-                    f"👤 {row[1]}:\n"
-                    f"  - Принято: *{row[2]}*\n"
-                    f"  - Принято без заявок: *{row[3]}*\n"
-                    f"  - Отправлено: *{row[4]}*\n"
-                    f"  - Брак: *{row[5]}*\n"
-                    f"  - Удалено из заявок: *{row[6]}*\n"
-                    f"  - Добавлено в заявки: *{row[7]}*\n"
-                )
-
-        if len(response) == 1:
-            return f"❌ Данные за {date_str} отсутствуют или сотрудники не имели операций."
-
-        return "\n".join(response)
-    except Exception as e:
-        return f"❌ Произошла ошибка при обработке данных: {str(e)}"
-
-# Обработчик команды /tvd
-@bot.message_handler(commands=['tvd'])
-def send_tvd_data(message):
-    try:
-        command = message.text.split()
-        if len(command) != 2:
-            bot.reply_to(message, "Пожалуйста, укажите дату в формате: /tvd dd.mm.yyyy")
-            return
-
-        date_str = command[1]
-        try:
-            datetime.strptime(date_str, '%d.%m.%Y')  # Проверка формата даты
-        except ValueError:
-            bot.reply_to(message, "Неверный формат даты. Используйте: dd.mm.yyyy")
-            return
-
-        tvd_message = get_tvd_data(date_str)
-        bot.reply_to(message, tvd_message, parse_mode="Markdown")
-    except Exception as e:
-        bot.reply_to(message, f"❌ Произошла ошибка: {str(e)}")
-
-# Запускаем планировщик для ежедневной задачи
-schedule.every().day.at("20:20").do(send_daily_stats)
-
-# Основной цикл
-def run_bot():
+# Функция для запуска планировщика задач в отдельном потоке
+def scheduler_thread():
+    schedule.every().day.at("20:20").do(send_daily_stats)
     while True:
-        bot.polling(none_stop=True)
         schedule.run_pending()
         time.sleep(1)
 
-if __name__ == "__main__":
-    run_bot()
+# Основная функция для запуска бота
+def run_bot():
+    bot.polling(none_stop=True)
 
+if __name__ == "__main__":
+    # Запускаем планировщик задач в отдельном потоке
+    scheduler = threading.Thread(target=scheduler_thread)
+    scheduler.daemon = True  # Чтобы поток завершился при завершении основного скрипта
+    scheduler.start()
+
+    # Запускаем бота
+    run_bot()
