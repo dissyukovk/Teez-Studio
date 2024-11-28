@@ -64,6 +64,8 @@ class STRequestProduct(models.Model):
     request = models.ForeignKey(STRequest, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     retouch_status = models.ForeignKey('RetouchStatus', on_delete=models.SET_NULL, blank=True, null=True)
+    photo_status = models.ForeignKey('PhotoStatus', on_delete=models.SET_NULL, blank=True, null=True)
+    photos_link = models.TextField(blank=True, null=True)
 
     class Meta:
         ordering = ['product__barcode']  # Сортировка по штрихкоду продукта
@@ -123,6 +125,13 @@ class InvoiceProduct(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
 
 class RetouchStatus(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class PhotoStatus(models.Model):
     id = models.IntegerField(primary_key=True)
     name = models.CharField(max_length=255, blank=True, null=True)
 
