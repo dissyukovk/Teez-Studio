@@ -5,6 +5,7 @@ import time
 import threading
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+import requests
 
 # Настройки бота и Google Sheets
 TELEGRAM_TOKEN = '7628160084:AAE8iY7EU35ifUD9gatgT3nCxxqjvggyvfc'
@@ -52,11 +53,21 @@ def get_stats(date_str):
     except Exception as e:
         return f"❌ Произошла ошибка: {str(e)}"
 
-# Функция отправки ежедневной статистики
+# Функция отправки ежедневной статистики с повторной попыткой
 def send_daily_stats():
     today = datetime.now().strftime('%d.%m.%Y')
     stats_message = get_stats(today)
-    bot.send_message(CHAT_ID, stats_message, parse_mode="Markdown")
+
+    max_retries = 3  # Количество попыток отправки
+    for attempt in range(max_retries):
+        try:
+            bot.send_message(CHAT_ID, stats_message, parse_mode="Markdown")
+            print(f"Статистика отправлена успешно с попытки {attempt + 1}")
+            break
+        except Exception as e:
+            print(f"Ошибка при отправке статистики: {str(e)}. Попытка {attempt + 1} из {max_retries}.")
+            if attempt == max_retries - 1:
+                print("Не удалось отправить статистику после нескольких попыток.")
 
 # Обработчик команды /stats
 @bot.message_handler(commands=['stats'])
@@ -82,20 +93,17 @@ def send_stats(message):
 # Функция для получения данных сотрудников с листа TVD
 def get_tvd_data(date_str):
     try:
-        # Открываем лист TVD
         tvd_sheet = client.open_by_key(SHEET_ID).worksheet('TVD')
         data = tvd_sheet.get_all_values()
         headers = data[0]
         rows = data[1:]
 
-        # Ищем строки с указанной датой
         response = [f"*Данные товародвижения за {date_str}:*\n"]
         for row in rows:
             if row[0] == date_str:
-                # Проверяем, что все числовые значения не равны 0
                 stats = list(map(int, row[2:]))
                 if all(value == 0 for value in stats):
-                    continue  # Пропускаем строки, где все значения равны 0
+                    continue
 
                 response.append(
                     f"👤 {row[1]}:\n"
@@ -142,15 +150,19 @@ def scheduler_thread():
         schedule.run_pending()
         time.sleep(1)
 
-# Основная функция для запуска бота
+# Основная функция для запуска бота с увеличенными таймаутами и обработкой ошибок
 def run_bot():
-    bot.polling(none_stop=True)
+    while True:
+        try:
+            bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
+        except requests.exceptions.ReadTimeout:
+            print("Таймаут подключения. Перезапуск...")
+        except Exception as e:
+            print(f"Произошла ошибка: {str(e)}. Перезапуск...")
 
 if __name__ == "__main__":
-    # Запускаем планировщик задач в отдельном потоке
     scheduler = threading.Thread(target=scheduler_thread)
-    scheduler.daemon = True  # Чтобы поток завершился при завершении основного скрипта
+    scheduler.daemon = True
     scheduler.start()
 
-    # Запускаем бота
     run_bot()
