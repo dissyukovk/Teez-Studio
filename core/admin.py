@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
+from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct
+
+
 
 # Admin for STRequestStatus
 @admin.register(STRequestStatus)
@@ -21,8 +25,8 @@ class STRequestAdmin(admin.ModelAdmin):
 # Admin for STRequestProduct
 @admin.register(STRequestProduct)
 class STRequestProductAdmin(admin.ModelAdmin):
-    list_display = ['request', 'product', 'retouch_status']
-    search_fields = ['request__RequestNumber', 'product__name']
+    list_display = ['request', 'product', 'retouch_status', 'photo_status', 'photos_link', 'sphoto_status', 'comment']
+    search_fields = ['request__RequestNumber', 'product__name', 'photo_status']
     list_filter = ['retouch_status']
     ordering = ['request']
 
@@ -125,3 +129,61 @@ class PhotoStatusAdmin(admin.ModelAdmin):
 class CameraAdmin(admin.ModelAdmin):
     list_display = ('id', 'IP')
     search_fields = ('IP',)
+
+# Снимаем стандартную регистрацию User
+admin.site.unregister(User)
+
+# Inline для профиля
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'User Profile'
+    list_filter = ('on_work')
+    fields = ('telegram_name', 'telegram_id', 'phone_number', 'birth_date', 'on_work')
+
+# Кастомизация админки пользователя
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+    inlines = (UserProfileInline,)
+
+    def add_view(self, *args, **kwargs):
+        self.inlines = (UserProfileInline,)
+        return super().add_view(*args, **kwargs)
+
+    def change_view(self, *args, **kwargs):
+        self.inlines = (UserProfileInline,)
+        return super().change_view(*args, **kwargs)
+
+# Регистрация модели RetouchRequestStatus
+@admin.register(RetouchRequestStatus)
+class RetouchRequestStatusAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')  # Отображаемые поля в списке
+    search_fields = ('name',)      # Поиск по имени
+
+
+# Регистрация модели RetouchRequest
+@admin.register(RetouchRequest)
+class RetouchRequestAdmin(admin.ModelAdmin):
+    list_display = ('RequestNumber', 'retoucher', 'creation_date', 'retouch_date', 'status', 'priority', 'comments')
+    search_fields = ('RequestNumber', 'retoucher__username')
+    list_filter = ('status', 'creation_date', 'retouch_date', 'priority')
+    ordering = ('-creation_date',)  # Сортировка по дате создания
+    raw_id_fields = ('retoucher',)  # Удобный выбор для ретушеров
+    autocomplete_fields = ('status',)  # Автокомплит для статусов
+
+
+# Регистрация модели ShootingToRetouchLink
+@admin.register(ShootingToRetouchLink)
+class ShootingToRetouchLinkAdmin(admin.ModelAdmin):
+    list_display = ('shooting_request', 'retouch_request')
+    raw_id_fields = ('shooting_request', 'retouch_request')  # Удобный выбор для запросов
+
+
+# Регистрация модели RetouchRequestProduct
+@admin.register(RetouchRequestProduct)
+class RetouchRequestProductAdmin(admin.ModelAdmin):
+    list_display = ('retouch_request', 'product', 'retouch_status', 'retouch_link', 'sretouch_status', 'comment')
+    search_fields = ('product__barcode', 'retouch_request__RequestNumber')
+    list_filter = ('retouch_status', 'sretouch_status')
+    raw_id_fields = ('retouch_request', 'product')  # Удобный выбор для продуктов
+    autocomplete_fields = ('retouch_status',)  # Автокомплит для статуса ретуши

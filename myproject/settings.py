@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
+    'ftback',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -46,6 +47,8 @@ INSTALLED_APPS = [
     'django_celery_results',
     'django_celery_beat',
     'django_filters',
+    'django_extensions',
+    'channels'
 ]
 
 REST_FRAMEWORK = {
@@ -98,6 +101,20 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'myproject.wsgi.application'
+ASGI_APPLICATION = 'myproject.asgi.application'
+
+# Используем Redis как бэкенд для каналов
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',  # Для разработки. Для продакшена используйте Redis.
+        # Для Redis используйте:
+        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        # 'CONFIG': {
+        #     "hosts": [("localhost", 6379)],
+        # },
+    },
+}
+
 
 
 # Database
@@ -187,3 +204,5 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # Путь для collectstatic

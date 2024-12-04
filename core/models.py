@@ -1,6 +1,17 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    telegram_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Telegram Username")
+    telegram_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Telegram ID")
+    phone_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="Phone Number")
+    birth_date = models.DateField(blank=True, null=True, verbose_name="Date of Birth")
+    on_work = models.BooleanField(default=False, verbose_name="Is On Work")
+
+    def __str__(self):
+        return f"Profile of {self.user.username}"
+
 # Модель для статусов заявок
 class STRequestStatus(models.Model):
     name = models.CharField(max_length=255)
@@ -66,6 +77,8 @@ class STRequestProduct(models.Model):
     retouch_status = models.ForeignKey('RetouchStatus', on_delete=models.SET_NULL, blank=True, null=True)
     photo_status = models.ForeignKey('PhotoStatus', on_delete=models.SET_NULL, blank=True, null=True)
     photos_link = models.TextField(blank=True, null=True)
+    sphoto_status = models.ForeignKey('SPhotoStatus', on_delete=models.SET_NULL, blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
 
     class Meta:
         ordering = ['product__barcode']  # Сортировка по штрихкоду продукта
@@ -131,7 +144,21 @@ class RetouchStatus(models.Model):
     def __str__(self):
         return self.name
 
+class SRetouchStatus(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
 class PhotoStatus(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class SPhotoStatus(models.Model):
     id = models.IntegerField(primary_key=True)
     name = models.CharField(max_length=255, blank=True, null=True)
 
@@ -195,3 +222,40 @@ class Camera(models.Model):
 
     def __str__(self):
         return f"Camera {self.id} - {self.IP}"
+
+class RetouchRequestStatus(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+class RetouchRequest(models.Model):
+    RequestNumber = models.BigIntegerField(unique=True)
+    retoucher = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='retouch_requests', blank=True, null=True)
+    creation_date = models.DateTimeField(auto_now_add=True)
+    retouch_date = models.DateTimeField(blank=True, null=True)
+    status = models.ForeignKey(RetouchRequestStatus, on_delete=models.SET_NULL, null=True)
+    comments = models.TextField(blank=True, null=True)
+    priority = models.SmallIntegerField(default=3)
+
+    def __str__(self):
+        return str(self.RequestNumber)
+
+class ShootingToRetouchLink(models.Model):
+    shooting_request = models.ForeignKey(STRequest, on_delete=models.CASCADE, related_name='linked_to_retouch')
+    retouch_request = models.ForeignKey(RetouchRequest, on_delete=models.CASCADE, related_name='linked_to_shooting')
+
+    def __str__(self):
+        return f"Shooting: {self.shooting_request.RequestNumber} -> Retouch: {self.retouch_request.RequestNumber}"
+
+class RetouchRequestProduct(models.Model):
+    retouch_request = models.ForeignKey(RetouchRequest, on_delete=models.CASCADE, related_name='request')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    retouch_status = models.ForeignKey(RetouchStatus, on_delete=models.SET_NULL, blank=True, null=True)
+    retouch_link = models.TextField(blank=True, null=True)  # Ссылка на обработанный файл
+    sretouch_status = models.ForeignKey(SRetouchStatus, on_delete=models.SET_NULL, blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.product.barcode} in Retouch Request {self.retouch_request.RequestNumber}"

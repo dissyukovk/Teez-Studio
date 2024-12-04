@@ -1,1 +1,1 @@
-python manage.py runserver 192.168.6.17:8000
+uvicorn myproject.asgi:application --host 192.168.6.49 --port 8000 --timeout-keep-alive 60

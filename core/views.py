@@ -488,8 +488,10 @@ def get_requests(request):
         requests = STRequest.objects.filter(status__name__in=['Отснято', 'на ретуши', 'на проверке ретуши'])
     elif user.groups.filter(name='ретушер').exists():
         requests = STRequest.objects.filter(retoucher=user, status__name='на ретуши')
-    return render(request, 'core/requests_list.html', {'requests': requests})
+    else:
+        requests = STRequest.objects.none()  # Пустой QuerySet, если пользователь не имеет роли
 
+    return render(request, 'core/requests_list.html', {'requests': requests})
 
 # Создание и редактирование заявок
 @api_view(['POST'])
