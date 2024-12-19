@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class ProductPagination(PageNumberPagination):
     page_size = 100
     page_size_query_param = 'page_size'
-    max_page_size = 10000
+    max_page_size = 100000
 
 class OrderPagination(PageNumberPagination):
     page_size = 10

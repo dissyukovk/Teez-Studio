@@ -4,7 +4,7 @@ const API_URL = 'http://192.168.6.49:8000/';
 
 const getInvoices = async (invoiceNumber = '', barcode = '', sortField = '', sortOrder = 'asc', page = 1, per_page = 100) => {
   try {
-    const response = await axios.get(`${API_URL}/api/invoices-list/filter/`, {
+    const response = await axios.get(`${API_URL}api/invoices-list/filter/`, {
       params: {
         invoice_number: invoiceNumber,
         barcode: barcode,
@@ -25,7 +25,7 @@ const getInvoices = async (invoiceNumber = '', barcode = '', sortField = '', sor
 const createInvoice = async (barcodes, userId) => {
   try {
     const token = localStorage.getItem('token');  // Предполагаем, что токен хранится в localStorage
-    const response = await axios.post(`${API_URL}/api/invoices/create/`, {
+    const response = await axios.post(`${API_URL}api/invoices/create/`, {
       barcodes: barcodes,
       date: new Date().toISOString(),
       creator: userId,  // Передаем ID текущего пользователя
@@ -44,7 +44,7 @@ const createInvoice = async (barcodes, userId) => {
 
 const getInvoiceDetails = async (invoiceNumber) => {
   try {
-    const response = await axios.get(`${API_URL}/api/invoices/${invoiceNumber}/details/`);
+    const response = await axios.get(`${API_URL}api/invoices/${invoiceNumber}/details/`);
     return response.data;
   } catch (error) {
     console.error('Ошибка при получении деталей накладной:', error);

@@ -67,6 +67,8 @@ class Product(models.Model):
     outcome_date = models.DateTimeField(null=True, blank=True)  # Дата отправки
     income_stockman = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='income_stockman_products')
     outcome_stockman = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='outcome_stockman_products')
+    info = models.TextField(blank=True, null=True)
+    priority = models.BooleanField(default=False, verbose_name="Priority")
 
     def __str__(self):
         return f"{self.barcode} - {self.name}"  # Отображаем barcode и имя

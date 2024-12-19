@@ -53,7 +53,7 @@ const ReadyPhotos = () => {
                     date: date || undefined,
                     sort_field: sortField,
                     sort_order: sortOrder,
-                    page_size: 10000,  // A large number to get all results without pagination
+                    page_size: 100000,  // A large number to get all results without pagination
                 },
             });
 

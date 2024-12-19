@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
-from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct
+from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct, SPhotoStatus
 
 
 
@@ -26,14 +26,14 @@ class STRequestAdmin(admin.ModelAdmin):
 @admin.register(STRequestProduct)
 class STRequestProductAdmin(admin.ModelAdmin):
     list_display = ['request', 'product', 'retouch_status', 'photo_status', 'photos_link', 'sphoto_status', 'comment']
-    search_fields = ['request__RequestNumber', 'product__name', 'photo_status']
+    search_fields = ['request__RequestNumber', 'product__name', 'photo_status__name']  # Используем __name для ForeignKey
     list_filter = ['retouch_status']
     ordering = ['request']
 
 # Admin for Product
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['barcode', 'name', 'category', 'in_stock_sum', 'seller', 'move_status', 'income_date', 'outcome_date']
+    list_display = ['barcode', 'name', 'category', 'in_stock_sum', 'seller', 'move_status', 'income_date', 'outcome_date', 'info']
     search_fields = ['barcode', 'name']
     list_filter = ['category', 'move_status']
     ordering = ['name']
@@ -120,6 +120,13 @@ class STRequestHistoryAdmin(admin.ModelAdmin):
 # Admin for PhotoStatus
 @admin.register(PhotoStatus)
 class PhotoStatusAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    search_fields = ('name',)
+    ordering = ('name',)
+
+# Admin for PhotoStatus
+@admin.register(SPhotoStatus)
+class SPhotoStatusAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
     search_fields = ('name',)
     ordering = ('name',)
