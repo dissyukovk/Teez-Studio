@@ -6,7 +6,7 @@ const getAuthHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-const API_URL = 'http://192.168.6.49:8000/';  // Убедитесь, что URL правильный
+const API_URL = 'http://192.168.6.17:8000/';  // Убедитесь, что URL правильный
 
 const getRequests = async ({
   status = '', 
@@ -288,6 +288,56 @@ const getRequestHistory = async ({ page = 1, pageSize = 10, search = '', sortFie
   }
 };
 
+const getSPhotographerRequests = async ({ 
+  requestNumber = '', 
+  barcode = '',
+  sortField = '', 
+  sortOrder = 'asc'
+}) => {
+  try {
+    const params = {
+      // Пример: если бекэнд ожидает query параметр 'status__in'
+      status__in: '3,4,5',
+      RequestNumber: requestNumber || undefined,
+      barcode: barcode || undefined,
+      sort_field: sortField || undefined,
+      sort_order: sortOrder || undefined,
+    };
+
+    const response = await axios.get(`${API_URL}ft/sphotographer/requests/`, {
+      headers: getAuthHeaders(),
+      params
+    });
+
+    // Предположим, что ответ — это просто массив заявок
+    // Если нет — адаптируйте под реальную структуру.
+    const data = response.data;
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching sphotographer requests:', error);
+    return [];
+  }
+};
+
+const getSPhotographerRequestDetail = async (requestNumber) => {
+  try {
+    const response = await axios.get(`${API_URL}ft/sphotographer/request-detail/?RequestNumber=${requestNumber}`, {
+      headers: getAuthHeaders(),
+    });
+
+    // Предполагаем, что ответ — объект с полями заявки и массивом products
+    const data = response.data || {};
+    // Гарантируем, что products будет массивом
+    if (!Array.isArray(data.products)) {
+      data.products = [];
+    }
+    return data;
+  } catch (error) {
+    console.error('Error fetching sphotographer request detail:', error);
+    return { products: [] };
+  }
+};
+
 const requestService = {
   getRequests,
   createRequest,
@@ -306,7 +356,9 @@ const requestService = {
   getRequestStatuses,
   getPhotographerStats,
   getRetoucherStats,
-  getRequestHistory
+  getRequestHistory,
+  getSPhotographerRequests,
+  getSPhotographerRequestDetail
 };
 
 export default requestService;

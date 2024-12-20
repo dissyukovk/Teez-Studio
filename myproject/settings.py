@@ -74,7 +74,7 @@ MIDDLEWARE = [
 ]
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),  # Set access token lifetime (e.g., 1 hour)
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),  # Set access token lifetime (e.g., 1 hour)
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Set refresh token lifetime (e.g., 7 days)
     'ROTATE_REFRESH_TOKENS': True,  # Automatically refresh tokens with every access
     'BLACKLIST_AFTER_ROTATION': True,  # Blacklist old refresh tokens after rotation

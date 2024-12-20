@@ -167,7 +167,6 @@ function Sidebar({ user }) {
           </li>
         )}
       </ul>
-
       <div className="user-info" onClick={() => setShowLogout(!showLogout)}>
         <div className="user-name">
           {user.first_name} {user.last_name}
