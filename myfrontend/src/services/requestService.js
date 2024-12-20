@@ -6,7 +6,7 @@ const getAuthHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-const API_URL = 'http://192.168.6.17:8000/';  // Убедитесь, что URL правильный
+const API_URL = 'http://192.168.6.229:8000/';  // Убедитесь, что URL правильный
 
 const getRequests = async ({
   status = '', 
@@ -289,19 +289,20 @@ const getRequestHistory = async ({ page = 1, pageSize = 10, search = '', sortFie
 };
 
 const getSPhotographerRequests = async ({ 
-  requestNumber = '', 
-  barcode = '',
+  search = '',
   sortField = '', 
-  sortOrder = 'asc'
+  sortOrder = 'asc',
+  page = 1,
+  pageSize = 50
 }) => {
   try {
     const params = {
-      // Пример: если бекэнд ожидает query параметр 'status__in'
-      status__in: '3,4,5',
-      RequestNumber: requestNumber || undefined,
-      barcode: barcode || undefined,
+      status_id__in: '3,4,5',
+      search: search || undefined,
       sort_field: sortField || undefined,
       sort_order: sortOrder || undefined,
+      page: page,
+      page_size: pageSize
     };
 
     const response = await axios.get(`${API_URL}ft/sphotographer/requests/`, {
@@ -309,25 +310,34 @@ const getSPhotographerRequests = async ({
       params
     });
 
-    // Предположим, что ответ — это просто массив заявок
-    // Если нет — адаптируйте под реальную структуру.
     const data = response.data;
-    return Array.isArray(data) ? data : [];
+    // Предполагается, что ответ имеет поля "count" и "results"
+    // Если results отсутствует или не массив, даём пустой массив
+    const results = data && Array.isArray(data.results) ? data.results : [];
+    const count = data && typeof data.count === 'number' ? data.count : 0;
+
+    return {
+      count: count,
+      results: results
+    };
   } catch (error) {
     console.error('Error fetching sphotographer requests:', error);
-    return [];
+    return {
+      count: 0,
+      results: []
+    };
   }
 };
 
+
+
 const getSPhotographerRequestDetail = async (requestNumber) => {
   try {
-    const response = await axios.get(`${API_URL}ft/sphotographer/request-detail/?RequestNumber=${requestNumber}`, {
+    const response = await axios.get(`${API_URL}ft/sphotographer/request-detail/?request_number=${requestNumber}`, {
       headers: getAuthHeaders(),
     });
 
-    // Предполагаем, что ответ — объект с полями заявки и массивом products
     const data = response.data || {};
-    // Гарантируем, что products будет массивом
     if (!Array.isArray(data.products)) {
       data.products = [];
     }

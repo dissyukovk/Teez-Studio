@@ -23,4 +23,8 @@ urlpatterns = [
     path('sphotographer/update-sphoto-status/', views.UpdateSPhotoStatusView.as_view(), name='update-sphoto-status'),
     path('sphotographer/assign-request/', views.AssignRequestToPhotographerView.as_view(), name='assign-request'),
     path('upcoming-birthdays/', views.upcoming_birthdays, name='upcoming_birthdays'),
+    path('create-photo-time/', views.CreateSTRequestPhotoTimeView.as_view(), name='create-photo-time'),
+    path('get-photo-times/', views.GetPhotoTimesByRequestNumberView.as_view(), name='get_photo_times'),
+    path('start-shooting/', views.StartShootingView.as_view(), name='start_shooting'),
+    path('server-time/', views.server_time, name='server_time'),
 ]

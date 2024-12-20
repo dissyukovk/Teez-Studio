@@ -262,3 +262,26 @@ class RetouchRequestProduct(models.Model):
 
     def __str__(self):
         return f"{self.product.barcode} in Retouch Request {self.retouch_request.RequestNumber}"
+
+from django.contrib.auth.models import User
+
+class STRequestPhotoTime(models.Model):
+    st_request_product = models.ForeignKey(
+        STRequestProduct, 
+        on_delete=models.CASCADE, 
+        related_name='photo_times'
+    )
+    photo_date = models.DateTimeField(blank=True, null=True)
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='st_request_photo_times'
+    )
+
+    class Meta:
+        ordering = ['photo_date']
+
+    def __str__(self):
+        return f"Photo time for {self.st_request_product} at {self.photo_date} by {self.user}"

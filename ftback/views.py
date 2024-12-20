@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.models import Group, User
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Q
@@ -24,6 +24,7 @@ from core.models import (
     Camera,
     STRequestProduct,
     PhotoStatus,
+    STRequestPhotoTime
 )
 from .serializers import (
     UserProfileSerializer,
@@ -72,6 +73,10 @@ class STRequestDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = STRequest.objects.all()
     serializer_class = STRequestSerializer
     permission_classes = [IsAuthenticated]
+
+def server_time(request):
+    current_time = timezone.now().isoformat()
+    return JsonResponse({"server_time": current_time})
 
 class UserInfoView(APIView):
     permission_classes = [IsAuthenticated]
@@ -243,41 +248,118 @@ class PhotographerUpdateProductView(APIView):
 
         return Response({"message": "STRequestProduct успешно обновлён."}, status=status.HTTP_200_OK)
 
+
+class CreateSTRequestPhotoTimeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request_number = request.data.get('request_number')
+        barcode = request.data.get('barcode')
+
+        # Проверим, что оба параметра есть в запросе
+        if not request_number or not barcode:
+            return Response({'error': 'request_number and barcode are required'}, status=400)
+
+        # Находим соответствующие объекты
+        st_request = get_object_or_404(STRequest, RequestNumber=request_number)
+        product = get_object_or_404(Product, barcode=barcode)
+        st_request_product = get_object_or_404(STRequestProduct, request=st_request, product=product)
+
+        # Создаем запись в STRequestPhotoTime
+        st_request_photo_time = STRequestPhotoTime.objects.create(
+            st_request_product=st_request_product,
+            user=request.user,
+            photo_date=timezone.now()
+        )
+
+        return Response({
+            'message': 'Photo time created successfully',
+            'id': st_request_photo_time.id
+        }, status=201)
+
+class GetPhotoTimesByRequestNumberView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_number = request.query_params.get('request_number')
+
+        if not request_number:
+            return Response({'error': 'request_number is required'}, status=400)
+
+        st_request = get_object_or_404(STRequest, RequestNumber=request_number)
+
+        # Получаем только те записи, у которых user = request.user
+        photo_times = STRequestPhotoTime.objects.filter(
+            st_request_product__request=st_request,
+            user=request.user
+        )
+
+        result = []
+        for pt in photo_times:
+            barcode = pt.st_request_product.product.barcode
+            photo_date = pt.photo_date.isoformat() if pt.photo_date else None
+            result.append({
+                'barcode': barcode,
+                'photo_date': photo_date
+            })
+
+        return Response(result, status=200)
+
+class StartShootingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request_number = request.data.get('request_number')
+        barcode = request.data.get('barcode')
+
+        if not request_number or not barcode:
+            return Response({'error': 'request_number and barcode are required'}, status=400)
+
+        st_request = get_object_or_404(STRequest, RequestNumber=request_number)
+        product = get_object_or_404(Product, barcode=barcode)
+        st_request_product = get_object_or_404(STRequestProduct, request=st_request, product=product)
+
+        # Предполагается, что PhotoStatus с pk=10 уже есть в базе данных
+        photo_status_obj = get_object_or_404(PhotoStatus, pk=10)
+
+        st_request_product.photo_status = photo_status_obj
+        st_request_product.save()
+
+        return Response({'message': 'Photo status updated to 10'}, status=200)
+
 class SPhotographerRequestsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SPhotographerRequestListSerializer
     pagination_class = StandardResultsSetPagination
 
-    # Фильтры и сортировка
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['RequestNumber', 'strequestproduct__product__barcode']
-
-    # Добавляем priority_count в список возможных полей для сортировки
     ordering_fields = [
         'RequestNumber', 
         'creation_date', 
         'photographer__last_name', 
         'photographer__first_name', 
-        'priority_count'  # Добавляем сюда
+        'priority_count'  
     ]
-
-    # Дефолтная сортировка: сначала по убыванию количества приоритетных товаров, потом по дате
     ordering = ['-priority_count', 'creation_date']
 
     def get_queryset(self):
-        queryset = STRequest.objects.all()
-
-        # Аннотируем количество приоритетных продуктов
-        queryset = queryset.annotate(
+        queryset = STRequest.objects.all().annotate(
             priority_count=Count(
                 'strequestproduct',
                 filter=Q(strequestproduct__product__priority=True)
             )
         )
 
-        status_id = self.request.query_params.get('status_id', None)
-        if status_id:
-            queryset = queryset.filter(status_id=status_id)
+        # Получаем параметр status_id__in из query params
+        status_in_param = self.request.query_params.get('status_id__in', None)
+        if status_in_param:
+            # Преобразуем строку '3,4,5' в список [3,4,5]
+            status_ids = [int(s) for s in status_in_param.split(',') if s.isdigit()]
+            queryset = queryset.filter(status_id__in=status_ids)
+        else:
+            # Если параметр не передан, используем статичный фильтр
+            queryset = queryset.filter(status_id__in=[3,4,5])
 
         return queryset
 

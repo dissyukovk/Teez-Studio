@@ -27,53 +27,36 @@ const FS_Manager_Request_detail = () => {
 
   const columns = [
     {
-      title: 'Штрихкод',
-      dataIndex: 'barcode',
-      key: 'barcode',
+      title: '№',
+      key: 'index',
+      render: (text, record, index) => index + 1
     },
-    {
-      title: 'Наименование',
-      dataIndex: 'product_name',
-      key: 'product_name',
-    },
-    {
-      title: 'Категория',
-      dataIndex: 'category_name',
-      key: 'category_name',
-    },
+    { title: 'Штрихкод', dataIndex: 'barcode', key: 'barcode' },
+    { title: 'Наименование', dataIndex: 'product_name', key: 'product_name' },
+    { title: 'Категория', dataIndex: 'category_name', key: 'category_name' },
     {
       title: 'Референс',
       dataIndex: 'reference_link',
       key: 'reference_link',
-      render: (text, record) => (
+      render: (text, record) =>
         record.reference_link ? (
           <Button type="link" href={record.reference_link} target="_blank">
             Открыть референс
           </Button>
         ) : null
-      )
     },
-    {
-      title: 'Статус фото',
-      dataIndex: 'photo_status_name',
-      key: 'photo_status_name',
-    },
-    {
-      title: 'Проверено',
-      dataIndex: 'sphoto_status_name',
-      key: 'sphoto_status_name',
-    },
+    { title: 'Статус фото', dataIndex: 'photo_status_name', key: 'photo_status_name' },
+    { title: 'Проверено', dataIndex: 'sphoto_status_name', key: 'sphoto_status_name' },
     {
       title: 'Фото',
       dataIndex: 'photos_link',
       key: 'photos_link',
-      render: (text, record) => (
+      render: (text, record) =>
         record.photos_link ? (
           <Button type="link" href={record.photos_link} target="_blank">
             Смотреть фото
           </Button>
         ) : null
-      )
     }
   ];
 
@@ -94,6 +77,7 @@ const FS_Manager_Request_detail = () => {
         columns={columns}
         dataSource={requestDetail?.products || []}
         rowKey="barcode"
+        pagination={false}
       />
     </div>
   );

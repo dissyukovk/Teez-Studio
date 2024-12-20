@@ -7,10 +7,14 @@ import { SearchOutlined } from '@ant-design/icons';
 const FS_Manager_Request_list = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchRequestNumber, setSearchRequestNumber] = useState('');
-  const [searchBarcode, setSearchBarcode] = useState('');
+  const [searchValue, setSearchValue] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 50,
+    total: 0,
+  });
 
   const navigate = useNavigate();
 
@@ -18,13 +22,18 @@ const FS_Manager_Request_list = () => {
     setLoading(true);
     try {
       const data = await requestService.getSPhotographerRequests({
-        requestNumber: searchRequestNumber,
-        barcode: searchBarcode,
+        search: searchValue,
         sortField,
-        sortOrder
+        sortOrder,
+        page: pagination.current,
+        pageSize: pagination.pageSize,
       });
-      // data уже массив после адаптации в сервисе
-      setRequests(data);
+
+      setRequests(data.results);
+      setPagination((prev) => ({
+        ...prev,
+        total: data.count,
+      }));
     } catch (error) {
       console.error('Failed to fetch requests', error);
       setRequests([]);
@@ -36,17 +45,42 @@ const FS_Manager_Request_list = () => {
   useEffect(() => {
     fetchRequests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortField, sortOrder]);
+  }, [sortField, sortOrder, pagination.current]);
 
   const handleSearch = () => {
+    setPagination((prev) => ({ ...prev, current: 1 }));
     fetchRequests();
   };
 
-  const handleTableChange = (pagination, filters, sorter) => {
+  const handleEnterPress = (e) => {
+    if (e.key === 'Enter') {
+      setPagination((prev) => ({ ...prev, current: 1 }));
+      fetchRequests();
+    }
+  };
+
+  const handleTableChange = (pag, filters, sorter) => {
     if (sorter.field) {
       setSortField(sorter.field);
       setSortOrder(sorter.order === 'ascend' ? 'asc' : 'desc');
     }
+
+    if (pag.current !== pagination.current) {
+      setPagination((prev) => ({ ...prev, current: pag.current }));
+    }
+  };
+
+  const formatDate = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    return date.toLocaleString('ru-RU', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute:'2-digit',
+      second:'2-digit'
+    });
   };
 
   const columns = [
@@ -66,12 +100,14 @@ const FS_Manager_Request_list = () => {
       dataIndex: 'creation_date',
       key: 'creation_date',
       sorter: true,
+      render: (value) => formatDate(value),
     },
     {
       title: 'Дата назначения фото',
       dataIndex: 'photo_date',
       key: 'photo_date',
       sorter: true,
+      render: (value) => formatDate(value),
     },
     {
       title: 'Фотограф',
@@ -100,16 +136,11 @@ const FS_Manager_Request_list = () => {
       <h1>Заявки фото 2.0</h1>
       <Space style={{ marginBottom: 16 }}>
         <Input
-          placeholder="Поиск по номеру заявки"
-          value={searchRequestNumber}
-          onChange={(e) => setSearchRequestNumber(e.target.value)}
-          style={{ width: 200 }}
-        />
-        <Input
-          placeholder="Поиск по штрихкоду"
-          value={searchBarcode}
-          onChange={(e) => setSearchBarcode(e.target.value)}
-          style={{ width: 200 }}
+          placeholder="Поиск по номеру заявки или штрихкоду"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          style={{ width: 400 }}
+          onKeyDown={handleEnterPress}
         />
         <Button
           type="primary"
@@ -125,7 +156,12 @@ const FS_Manager_Request_list = () => {
         loading={loading}
         rowKey="RequestNumber"
         onChange={handleTableChange}
-        pagination={false}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: false
+        }}
       />
     </div>
   );

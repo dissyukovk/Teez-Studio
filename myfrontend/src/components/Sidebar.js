@@ -134,6 +134,9 @@ function Sidebar({ user }) {
               <NavLink to="/requests/manager" activeClassName="active">Заявки (менеджер)</NavLink>
             </li>
             <li>
+              <NavLink to="/fs_manager_request_list" activeClassName="active">Заявки 2.0</NavLink>
+            </li>
+            <li>
               <NavLink to="/products-manager" activeClassName="active">Список товаров (менеджер)</NavLink>
             </li>
             <li>
