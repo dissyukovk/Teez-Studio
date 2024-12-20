@@ -39,6 +39,8 @@ import FsOrderTable from './components/fs_OrderTable';
 import FsOrderView from './pages/fs_OrderView';
 import FSStockmanRequestView from './pages/FS_Stockman_RequestView';
 import FsManagerRequestHistory from './pages/fs_manager_requesthistory';
+import FS_Manager_Request_list from './pages/FS_Manager_Request_list';
+import FS_Manager_Request_detail from './pages/FS_Manager_Request_detail';
 
 const AppContent = ({ isAuthenticated, user }) => {
   const location = useLocation();
@@ -99,6 +101,8 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/fs_orders/:orderNumber" element={isAuthenticated ? <FsOrderView /> : <Navigate to="/login" />} />
         <Route path="/fs_stockman_requestview/:requestNumber" element={isAuthenticated ? <FSStockmanRequestView /> : <Navigate to="/login" />} />
         <Route path="/fs_manager_requesthistory" element={isAuthenticated ? <FsManagerRequestHistory /> : <Navigate to="/login" />} />
+        <Route path="/fs_manager_request_list" element={<FS_Manager_Request_list />} />
+        <Route path="/fs_manager_request_detail/:requestNumber" element={<FS_Manager_Request_detail />} />
       </Routes>
     </div>
   );  
