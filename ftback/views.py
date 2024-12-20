@@ -3,12 +3,14 @@ from django.contrib.auth.models import Group, User
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Q
 from django.utils import timezone
+from django.http import JsonResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, status
 from .pagination import StandardResultsSetPagination
+from datetime import date, timedelta
 from core.models import (
     UserProfile,
     Product,
@@ -430,3 +432,33 @@ class AssignRequestToPhotographerView(APIView):
         st_request.save()
 
         return Response({"message": "STRequest assigned to photographer successfully"}, status=status.HTTP_200_OK)
+
+def upcoming_birthdays(request):
+    # Сегодняшняя дата
+    today = date.today()
+
+    # Список дат на ближайшие 10 дней (включая сегодня)
+    upcoming_dates = [(today + timedelta(days=i)) for i in range(10)]
+
+    # Приведём список дат к формату (месяц, день) для удобства сравнения
+    upcoming_md = [(d.month, d.day) for d in upcoming_dates]
+
+    # Загружаем всех пользователей с датой рождения
+    # Можно оптимизировать запрос: .select_related('user') для уменьшения количества запросов
+    profiles = UserProfile.objects.select_related('user').filter(birth_date__isnull=False)
+
+    # Фильтруем профили, у которых день рождения попадает в следующие 10 дней
+    result = []
+    for profile in profiles:
+        bd = profile.birth_date
+        if (bd.month, bd.day) in upcoming_md:
+            # Форматируем дату рождения (без года)
+            birth_str = bd.strftime('%d.%m')
+            # Добавляем в результат словарь с именем, фамилией и датой
+            result.append({
+                'first_name': profile.user.first_name,
+                'last_name': profile.user.last_name,
+                'birth_date': birth_str
+            })
+
+    return JsonResponse(result, safe=False)

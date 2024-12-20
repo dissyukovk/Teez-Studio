@@ -63,6 +63,7 @@ class STRequestPhotographerListSerializer(serializers.ModelSerializer):
     def get_priority_count(self, obj):
         return obj.strequestproduct_set.filter(product__priority=True).count()
 
+# Сериалайзер (PhotographerSTRequestSerializer)
 class PhotographerSTRequestSerializer(serializers.ModelSerializer):
     products = serializers.SerializerMethodField()
     status = serializers.CharField(source="status.name", read_only=True)
@@ -95,6 +96,9 @@ class PhotographerSTRequestSerializer(serializers.ModelSerializer):
                 'reference_link': product.category.reference_link if product.category else None,
                 'photo_status': rp.photo_status.name if rp.photo_status else None,
                 'sphoto_status': rp.sphoto_status.name if rp.sphoto_status else None,
+                'info': product.info,
+                'priority': product.priority,
+                'comment': rp.comment  # Добавили комментарий из STRequestProduct
             })
         return products_data
 
@@ -103,6 +107,7 @@ class PhotographerSTRequestSerializer(serializers.ModelSerializer):
 
     def get_priority_count(self, obj):
         return obj.strequestproduct_set.filter(product__priority=True).count()
+
 
 class CameraSerializer(serializers.ModelSerializer):
     class Meta:

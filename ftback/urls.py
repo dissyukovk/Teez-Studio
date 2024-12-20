@@ -22,4 +22,5 @@ urlpatterns = [
     path('sphotographer/onwork-photographers/', views.OnWorkPhotographersListView.as_view(), name='onwork-photographers'),
     path('sphotographer/update-sphoto-status/', views.UpdateSPhotoStatusView.as_view(), name='update-sphoto-status'),
     path('sphotographer/assign-request/', views.AssignRequestToPhotographerView.as_view(), name='assign-request'),
+    path('upcoming-birthdays/', views.upcoming_birthdays, name='upcoming_birthdays'),
 ]

@@ -81,6 +81,7 @@ class STRequestProduct(models.Model):
     photos_link = models.TextField(blank=True, null=True)
     sphoto_status = models.ForeignKey('SPhotoStatus', on_delete=models.SET_NULL, blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
+    OnRetouch = models.BooleanField(default=False, verbose_name="OnRetouch")
 
     class Meta:
         ordering = ['product__barcode']  # Сортировка по штрихкоду продукта

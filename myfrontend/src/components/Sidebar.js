@@ -41,6 +41,9 @@ function Sidebar({ user }) {
             <li>
               <NavLink to="/print-barcode" activeClassName="active">Печать ШК</NavLink>
             </li>
+            <li>
+              <NavLink to="/fs_manager_requesthistory" activeClassName="active">История изменения заявок</NavLink>
+            </li>
           </>
         )}
 
@@ -91,6 +94,9 @@ function Sidebar({ user }) {
             </li>
             <li>
               <NavLink to="/retoucher-stats" activeClassName="active">Статистика ретушеров</NavLink>
+            </li>
+            <li>
+              <NavLink to="/requests/manager" activeClassName="active">Заявки (общий лист)</NavLink>
             </li>
           </>
         )}
