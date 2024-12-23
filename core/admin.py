@@ -174,23 +174,34 @@ class RetouchRequestAdmin(admin.ModelAdmin):
     list_display = ('RequestNumber', 'retoucher', 'creation_date', 'retouch_date', 'status', 'priority', 'comments')
     search_fields = ('RequestNumber', 'retoucher__username')
     list_filter = ('status', 'creation_date', 'retouch_date', 'priority')
-    ordering = ('-creation_date',)  # Сортировка по дате создания
-    raw_id_fields = ('retoucher',)  # Удобный выбор для ретушеров
-    autocomplete_fields = ('status',)  # Автокомплит для статусов
+    ordering = ('-creation_date',)
+    raw_id_fields = ('retoucher',)
+    autocomplete_fields = ('status',)
 
 
 # Регистрация модели ShootingToRetouchLink
 @admin.register(ShootingToRetouchLink)
 class ShootingToRetouchLinkAdmin(admin.ModelAdmin):
     list_display = ('shooting_request', 'retouch_request')
-    raw_id_fields = ('shooting_request', 'retouch_request')  # Удобный выбор для запросов
+    raw_id_fields = ('shooting_request', 'retouch_request')
 
 
 # Регистрация модели RetouchRequestProduct
 @admin.register(RetouchRequestProduct)
 class RetouchRequestProductAdmin(admin.ModelAdmin):
-    list_display = ('retouch_request', 'product', 'retouch_status', 'retouch_link', 'sretouch_status', 'comment')
-    search_fields = ('product__barcode', 'retouch_request__RequestNumber')
+    # Поле product заменено на get_product_barcode для отображения штрихкода товара
+    list_display = ('retouch_request', 'get_product_barcode', 'retouch_status', 'retouch_link', 'sretouch_status', 'comment')
+    # Поиск по штрихкоду будет через цепочку st_request_product__product__barcode
+    search_fields = ('st_request_product__product__barcode', 'retouch_request__RequestNumber')
     list_filter = ('retouch_status', 'sretouch_status')
-    raw_id_fields = ('retouch_request', 'product')  # Удобный выбор для продуктов
-    autocomplete_fields = ('retouch_status',)  # Автокомплит для статуса ретуши
+    # Заменяем product на st_request_product в raw_id_fields
+    raw_id_fields = ('retouch_request', 'st_request_product')
+    autocomplete_fields = ('retouch_status',)
+
+    def get_product_barcode(self, obj):
+        # Отображаем штрихкод продукта через связанный st_request_product
+        if obj.st_request_product and obj.st_request_product.product:
+            return obj.st_request_product.product.barcode
+        return ''
+    get_product_barcode.short_description = "Product Barcode"
+

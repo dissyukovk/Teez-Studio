@@ -8,9 +8,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework import generics, status
-from .pagination import StandardResultsSetPagination
+from rest_framework.pagination import PageNumberPagination
+from rest_framework import generics, permissions, status, filters
+from .pagination import StandardResultsSetPagination, SRReadyProductsPagination, RetouchRequestPagination
 from datetime import date, timedelta
+from .filters import SRReadyProductFilter
 from core.models import (
     UserProfile,
     Product,
@@ -24,7 +26,8 @@ from core.models import (
     Camera,
     STRequestProduct,
     PhotoStatus,
-    STRequestPhotoTime
+    STRequestPhotoTime,
+    RetouchRequest
 )
 from .serializers import (
     UserProfileSerializer,
@@ -38,7 +41,14 @@ from .serializers import (
     SPhotographerRequestDetailSerializer,
     PhotoStatusSerializer,
     SPhotoStatusSerializer,
-    PhotographerUserSerializer
+    PhotographerUserSerializer,
+    SRReadyProductSerializer,
+    SRRetouchRequestCreateSerializer,
+    SRRetouchersSerializer,
+    SRRetouchRequestSerializer,
+    RetouchRequestListSerializer,
+    RetouchRequestDetailSerializer,
+    RetouchRequestAssignSerializer
 )
 
 # CRUD для UserProfile
@@ -544,3 +554,144 @@ def upcoming_birthdays(request):
             })
 
     return JsonResponse(result, safe=False)
+
+class SRReadyProductsListView(generics.ListAPIView):
+    queryset = STRequestProduct.objects.filter(photo_status=1, sphoto_status=1)
+    serializer_class = SRReadyProductSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = SRReadyProductFilter
+    pagination_class = SRReadyProductsPagination
+
+    # Добавляем поле status в доступные поля для сортировки.
+    # Если статус - связанное поле, возможно понадобится 'request__status_id' или 'request__status__name'
+    ordering_fields = ['product__barcode', 'product__name', 'request__photo_date', 'product__priority', 'OnRetouch', 'request__status_id']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Дефолтная сортировка, если нужна
+        return qs.order_by('-product__priority', 'request__photo_date')
+
+class SRRetouchRequestCreateView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = SRRetouchRequestCreateSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        rr = serializer.save()
+        rr_serializer = SRRetouchRequestSerializer(rr)
+        return Response(rr_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class SRetouchersListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = SRRetouchersSerializer
+
+    def get_queryset(self):
+        # Находим группу "Retoucher"
+        try:
+            retoucher_group = Group.objects.get(name="Ретушер")
+        except Group.DoesNotExist:
+            return UserProfile.objects.none()
+
+        # Фильтруем пользователей, которые:
+        # - находятся в группе Retoucher
+        # - user.profile.on_work = True
+        return UserProfile.objects.filter(
+            on_work=True,
+            user__groups=retoucher_group
+        ).select_related('user')
+
+class SRRetouchRequestListView(generics.ListAPIView):
+    """
+    Список заявок на ретушь (старший ретушер).
+    Если в URL есть status_id, фильтруем, иначе показываем все.
+    Пример: /sr-request-list/2/ — только статус=2
+            /sr-request-list/   — все статусы
+    """
+    serializer_class = RetouchRequestListSerializer
+    pagination_class = RetouchRequestPagination
+    permission_classes = [permissions.IsAuthenticated]
+
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    # Если нужна фильтрация по полям запроса: filterset_fields = ['status', 'priority']
+    ordering_fields = ['RequestNumber', 'creation_date', 'status', 'priority']
+    ordering = ['-creation_date']  # Дефолтная сортировка
+
+    def get_queryset(self):
+        queryset = RetouchRequest.objects.select_related('retoucher', 'status')
+        status_id = self.kwargs.get('status_id')  # ловим из URL
+        if status_id:
+            queryset = queryset.filter(status_id=status_id)
+        return queryset
+
+
+class SRRetouchRequestDetailView(generics.RetrieveAPIView):
+    """
+    Детальная заявка для старшего ретушера:
+    /sr-request-detail/<int:request_number>/
+    """
+    serializer_class = RetouchRequestDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'RequestNumber'  # Поиск по полю RequestNumber
+
+    def get_queryset(self):
+        return RetouchRequest.objects.select_related('retoucher', 'status')
+
+class SRetouchRequestListView(generics.ListAPIView):
+    """
+    Список заявок для обычного ретушера:
+    Показываем только те заявки, где RetouchRequest.retoucher == request.user
+    Если в URL указан status_id, фильтруем дополнительно.
+    """
+    serializer_class = RetouchRequestListSerializer
+    pagination_class = RetouchRequestPagination
+    permission_classes = [permissions.IsAuthenticated]
+
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    ordering_fields = ['RequestNumber', 'creation_date', 'status', 'priority']
+    ordering = ['-creation_date']
+
+    def get_queryset(self):
+        queryset = RetouchRequest.objects.select_related('retoucher', 'status')\
+                                         .filter(retoucher=self.request.user)
+
+        status_id = self.kwargs.get('status_id')
+        if status_id:
+            queryset = queryset.filter(status_id=status_id)
+        return queryset
+
+
+class SRetouchRequestDetailView(generics.RetrieveAPIView):
+    """
+    Детальная заявка для обычного ретушера:
+    Отдаём только если текущий пользователь = retoucher заявки.
+    """
+    serializer_class = RetouchRequestDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'RequestNumber'
+
+    def get_queryset(self):
+        return RetouchRequest.objects.select_related('retoucher', 'status')\
+                                     .filter(retoucher=self.request.user)
+
+class SRRetouchRequestAssignView(APIView):
+    """
+    POST: Назначить ретушера на заявку
+    Принимает {"request_number": 12345, "user_id": 10}
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = RetouchRequestAssignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        retouch_request = serializer.save()
+
+        # Можем вернуть краткую информацию о заявке или success
+        return Response({
+            "detail": "Retoucher assigned successfully",
+            "request_number": retouch_request.RequestNumber,
+            "retoucher": f"{retouch_request.retoucher.first_name} {retouch_request.retoucher.last_name if retouch_request.retoucher else ''}",
+            "status_id": retouch_request.status_id
+        }, status=status.HTTP_200_OK)

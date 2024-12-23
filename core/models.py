@@ -176,7 +176,6 @@ class ProductOperationTypes(models.Model):
     def __str__(self):
         return self.name
 
-
 # Модель для записи операций
 class ProductOperation(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
@@ -238,7 +237,7 @@ class RetouchRequest(models.Model):
     retoucher = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='retouch_requests', blank=True, null=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     retouch_date = models.DateTimeField(blank=True, null=True)
-    status = models.ForeignKey(RetouchRequestStatus, on_delete=models.SET_NULL, null=True)
+    status = models.ForeignKey(RetouchRequestStatus, on_delete=models.SET_NULL, null=True, blank=True)
     comments = models.TextField(blank=True, null=True)
     priority = models.SmallIntegerField(default=3)
 
@@ -253,17 +252,16 @@ class ShootingToRetouchLink(models.Model):
         return f"Shooting: {self.shooting_request.RequestNumber} -> Retouch: {self.retouch_request.RequestNumber}"
 
 class RetouchRequestProduct(models.Model):
-    retouch_request = models.ForeignKey(RetouchRequest, on_delete=models.CASCADE, related_name='request')
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    retouch_request = models.ForeignKey(RetouchRequest, on_delete=models.CASCADE, related_name='retouch_products')
+    st_request_product = models.ForeignKey(STRequestProduct, blank=True, null=True, on_delete=models.CASCADE, related_name='retouch_requests')
+
     retouch_status = models.ForeignKey(RetouchStatus, on_delete=models.SET_NULL, blank=True, null=True)
     retouch_link = models.TextField(blank=True, null=True)  # Ссылка на обработанный файл
     sretouch_status = models.ForeignKey(SRetouchStatus, on_delete=models.SET_NULL, blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.product.barcode} in Retouch Request {self.retouch_request.RequestNumber}"
-
-from django.contrib.auth.models import User
+        return f"{self.st_request_product.product.barcode} in Retouch Request {self.retouch_request.RequestNumber}"
 
 class STRequestPhotoTime(models.Model):
     st_request_product = models.ForeignKey(
