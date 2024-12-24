@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
-from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct, SPhotoStatus
+from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct, SPhotoStatus, STRequestPhotoTime
 
 
 
@@ -205,3 +205,42 @@ class RetouchRequestProductAdmin(admin.ModelAdmin):
         return ''
     get_product_barcode.short_description = "Product Barcode"
 
+@admin.register(STRequestPhotoTime)
+class STRequestPhotoTimeAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "request_number",       # метод, возвращающий номер заявки
+        "product_barcode",      # метод, возвращающий штрихкод
+        "photo_date",
+        "user",
+    )
+    search_fields = (
+        "st_request_product__request__RequestNumber", 
+        "st_request_product__product__barcode",
+        "user__username",
+        "user__email"
+    )
+    list_filter = (
+        "st_request_product__request", 
+        "st_request_product__product", 
+        "user",
+        "photo_date"
+    )
+    date_hierarchy = "photo_date"
+    ordering = ("photo_date",)
+
+    def request_number(self, obj):
+        """
+        Возвращает номер заявки, связанный через st_request_product.
+        """
+        # Убедитесь, что поле называется request
+        return obj.st_request_product.request.RequestNumber if obj.st_request_product and obj.st_request_product.request else None
+    request_number.short_description = "Request Number"
+
+    def product_barcode(self, obj):
+        """
+        Возвращает штрихкод продукта, связанный через st_request_product.
+        """
+        # Убедитесь, что поле называется product
+        return obj.st_request_product.product.barcode if obj.st_request_product and obj.st_request_product.product else None
+    product_barcode.short_description = "Product Barcode"

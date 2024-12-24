@@ -35,6 +35,6 @@ urlpatterns = [
     path('sr-request-detail/<int:request_number>/', views.SRRetouchRequestDetailView.as_view(), name='sr_request_detail'),
     path('s-request-list/', views.SRetouchRequestListView.as_view(), name='s_request_list_all'),
     path('s-request-list/<int:status_id>/', views.SRetouchRequestListView.as_view(), name='s_request_list_status'),
-    path('s-request-detail/<int:request_number>/', views.SRetouchRequestDetailView.as_view(), name='s_request_detail'),
+    path('s-request-detail/<int:RequestNumber>/', views.SRetouchRequestDetailView.as_view(), name='s_request_detail'),
     path('sr/assign-retouch-request/', views.SRRetouchRequestAssignView.as_view(), name='sr_assign_retouch_request'),
 ]

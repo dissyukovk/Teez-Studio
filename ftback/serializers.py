@@ -363,6 +363,7 @@ class RetouchRequestListSerializer(serializers.ModelSerializer):
     # retoucher_name: имя и фамилия ретушера
     retoucher_name = serializers.SerializerMethodField()
     priority_count = serializers.SerializerMethodField()
+    total_products = serializers.SerializerMethodField()  # <-- добавляем поле
 
     class Meta:
         model = RetouchRequest
@@ -372,7 +373,8 @@ class RetouchRequestListSerializer(serializers.ModelSerializer):
             'retoucher_name',
             'comments',
             'priority_count',
-            'status',  # ID статуса или вы можете вывести status.name отдельным полем
+            'status',   # ID статуса
+            'total_products'  # <-- добавляем в список полей
         ]
 
     def get_retoucher_name(self, obj):
@@ -381,18 +383,18 @@ class RetouchRequestListSerializer(serializers.ModelSerializer):
         return ""
 
     def get_priority_count(self, obj):
-        """
-        Нужно посчитать количество продуктов, у которых product.priority = True
-        Здесь логика такая:
-        - Ищем все RetouchRequestProduct для данной заявки
-        - Через st_request_product получаем product
-        - Считаем, у скольких из этих product стоит priority = True
-        """
         return RetouchRequestProduct.objects.filter(
             retouch_request=obj,
             st_request_product__product__priority=True
         ).count()
 
+    def get_total_products(self, obj):
+        """
+        Возвращаем общее количество товаров (RetouchRequestProduct) в данной заявке.
+        Если нужна логика по уникальным товарам, 
+        можно считывать st_request_product_id или product_id.
+        """
+        return RetouchRequestProduct.objects.filter(retouch_request=obj).count()
 
 ### Сериализатор детальной заявки
 class RetouchRequestDetailSerializer(serializers.ModelSerializer):
@@ -412,7 +414,8 @@ class RetouchRequestDetailSerializer(serializers.ModelSerializer):
             'priority',
             'status',     # Или status_id / status.name — под вашу логику
             'products',   # Детальный список продуктов
-            'retouch_date'
+            'retouch_date',
+            'priority_count',
         ]
 
     def get_retoucher_name(self, obj):

@@ -662,7 +662,6 @@ class SRetouchRequestListView(generics.ListAPIView):
             queryset = queryset.filter(status_id=status_id)
         return queryset
 
-
 class SRetouchRequestDetailView(generics.RetrieveAPIView):
     """
     Детальная заявка для обычного ретушера:
