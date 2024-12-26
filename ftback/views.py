@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import generics, permissions, status, filters
-from .pagination import StandardResultsSetPagination, SRReadyProductsPagination, RetouchRequestPagination
+from .pagination import StandardResultsSetPagination, SRReadyProductsPagination, RetouchRequestPagination, ReadyPhotosPagination
 from datetime import date, timedelta
 from .filters import SRReadyProductFilter
 from core.models import (
@@ -57,7 +57,8 @@ from .serializers import (
     SRetouchStatusSerializer,
     RetouchStatusUpdateSerializer,
     SRetouchStatusUpdateSerializer,
-    RetouchRequestSetStatusSerializer
+    RetouchRequestSetStatusSerializer,
+    ReadyPhotosSerializer,
 )
 
 # CRUD для UserProfile
@@ -806,3 +807,42 @@ class UpdateRetouchRequestStatusView(APIView):
             "request_number": rr.RequestNumber,
             "status_id": rr.status_id,
         }, status=status.HTTP_200_OK)
+
+class ReadyPhotosListView(generics.ListAPIView):
+    serializer_class = ReadyPhotosSerializer
+    pagination_class = ReadyPhotosPagination
+
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+
+    ordering_fields = [
+        'st_request_product__product__barcode',
+        'st_request_product__product__name',
+        'seller',
+        # заменяем retouch_date → retouch_request__creation_date
+        'retouch_request__creation_date',
+        'retouch_link'
+    ]
+    ordering = ['st_request_product__product__barcode']  # дефолтная сортировка
+
+    search_fields = [
+        'st_request_product__product__barcode',
+        'st_request_product__product__name'
+    ]
+
+    def get_queryset(self):
+        qs = RetouchRequestProduct.objects.filter(
+            retouch_status_id=1,
+            sretouch_status_id=1
+        ).select_related(
+            'retouch_request',
+            'st_request_product__product'
+        )
+
+        barcodes_str = self.request.query_params.get('barcodes')
+        if barcodes_str:
+            bc_list = [b.strip() for b in barcodes_str.split(',') if b.strip()]
+            qs = qs.filter(st_request_product__product__barcode__in=bc_list)
+
+        return qs
+
+
