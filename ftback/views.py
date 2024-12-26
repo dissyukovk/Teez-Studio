@@ -814,35 +814,140 @@ class ReadyPhotosListView(generics.ListAPIView):
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
 
+    # Разрешённые поля для сортировки:
     ordering_fields = [
         'st_request_product__product__barcode',
         'st_request_product__product__name',
-        'seller',
-        # заменяем retouch_date → retouch_request__creation_date
+        # Было: 'seller' — но реально это product.seller
+        'st_request_product__product__seller',
         'retouch_request__creation_date',
-        'retouch_link'
+        'retouch_link',
     ]
-    ordering = ['st_request_product__product__barcode']  # дефолтная сортировка
+    # Дефолтная сортировка (по штрихкоду, возм. по убыванию добавьте "-"):
+    ordering = ['st_request_product__product__barcode']
 
+    # Поля для поиска (search=?)
     search_fields = [
         'st_request_product__product__barcode',
-        'st_request_product__product__name'
+        'st_request_product__product__name',
     ]
 
     def get_queryset(self):
+        """ Возвращаем только те RRP, у которых retouch_status=2 (Готов)
+            и sretouch_status=1 (Проверено).
+        """
         qs = RetouchRequestProduct.objects.filter(
-            retouch_status_id=1,
+            retouch_status_id=2,
             sretouch_status_id=1
         ).select_related(
             'retouch_request',
             'st_request_product__product'
         )
 
+        # 1) Массовый поиск по штрихкодам (barcodes=123,456)
         barcodes_str = self.request.query_params.get('barcodes')
         if barcodes_str:
             bc_list = [b.strip() for b in barcodes_str.split(',') if b.strip()]
             qs = qs.filter(st_request_product__product__barcode__in=bc_list)
 
+        # 2) Поиск по seller (ID магазина)
+        #    На фронте вы передаёте params.seller = seller.trim().
+        #    Нужно, чтобы бэкенд фильтровал product.seller=?
+        seller = self.request.query_params.get('seller')
+        if seller:
+            qs = qs.filter(st_request_product__product__seller=seller)
+
         return qs
 
+class SRStatisticView(APIView):
+    """
+    GET /ft/sr-statistic/?date=YYYY-MM-DD
+    Выдаёт список пользователей (retouchers) и кол-во обработанных 
+    (retouch_status=2 и sretouch_status=1) продуктов в указанную дату.
+    Дата проверяется по RetouchRequest.retouch_date (или creation_date — выберите логику).
+    Сортируем по first_name, last_name.
+    """
 
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        # Считываем параметр date
+        date_str = request.query_params.get('date')  # "YYYY-MM-DD"
+        if not date_str:
+            return Response({"error": "Parameter 'date' is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Преобразуем в datetime.date
+        # Можно ещё ловить исключения.
+        from datetime import datetime
+        try:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return Response({"error": "Invalid date format, expected YYYY-MM-DD."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Фильтруем RetouchRequestProduct:
+        # retouch_status=2 (Готов), sretouch_status=1 (Проверено).
+        # Плюс внутри связанного RetouchRequest смотрим retouch_date (или creation_date) == date_obj
+        # Допустим, хотим сравнить retouch_date__date == date_obj.
+        # Если retouch_date хранит время, нужно __date-lookup.
+        # Если retouch_date может быть null, учтём это.
+
+        qs = RetouchRequestProduct.objects.filter(
+            retouch_status_id=2,
+            sretouch_status_id=1,
+            retouch_request__creation_date__date=date_obj  # или creation_date__date=date_obj
+        ).select_related("retouch_request__retoucher")
+
+        # Группируем по retoucher, считаем кол-во
+        # (User может быть NULL => retoucher_id может быть null, учтём это)
+        # добавим .exclude(retouch_request__retoucher__isnull=True) если нужен только реальный user
+        qs = qs.exclude(retouch_request__retoucher__isnull=True)
+
+        # Annotate:
+        # Сначала нам нужно сгруппировать. Для этого обычно используют values("retouch_request__retoucher") + annotate.
+        # Затем, чтобы достать first_name, last_name — придётся делать join (или отдельный SQL).
+        # Проще будет ниже вручную пройтись.
+        from django.db.models import F
+
+        # Собираем (user_id, count) ... но ещё нужен first_name, last_name
+        # Способ 1: Сгруппировать по retouch_request__retoucher, но потом всё равно 
+        #           придётся вручную доставать User. 
+        # Способ 2: Сразу join к User и group_by user.id:
+        # Django позволяет "through" join: retouch_request__retoucher__id
+        # Annotate(count=Count("id")) — id RetouchRequestProduct
+        # example:
+        user_qs = qs.values(
+            "retouch_request__retoucher__id",
+            "retouch_request__retoucher__first_name",
+            "retouch_request__retoucher__last_name",
+        ).annotate(
+            done_count=Count("id")
+        )
+
+        # Превращаем в Python-список [{...}, {...}, ...], 
+        # потом сортируем по first_name, last_name.
+        # (в теории можно было .order_by("retouch_request__retoucher__first_name", ...)
+        user_list = list(user_qs)
+
+        # Сортируем (Python-способ)
+        user_list.sort(key=lambda x: (
+            x["retouch_request__retoucher__first_name"] or "", 
+            x["retouch_request__retoucher__last_name"] or "",
+        ))
+
+        # Преобразуем к желаемому выводу
+        result = []
+        for row in user_list:
+            uid = row["retouch_request__retoucher__id"]
+            fn  = row["retouch_request__retoucher__first_name"] or ""
+            ln  = row["retouch_request__retoucher__last_name"]  or ""
+            cnt = row["done_count"]
+
+            result.append({
+                "user_id": uid,
+                "first_name": fn,
+                "last_name": ln,
+                "count": cnt,
+            })
+
+        return Response(result, status=status.HTTP_200_OK)

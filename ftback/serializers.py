@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from django.db.models import Max, Sum, Q
+from django.db.models import Max, Sum, Q, Count
 from django.contrib.auth.models import User
 from core.models import(
     UserProfile,
@@ -695,9 +695,7 @@ class ReadyPhotosSerializer(serializers.ModelSerializer):
     retouch_date = serializers.DateTimeField(
         source='retouch_request.creation_date', read_only=True
     )
-    retouch_link = serializers.CharField(
-        source='retouch_link', read_only=True
-    )
+    retouch_link = serializers.CharField(read_only=True)
 
     class Meta:
         model = RetouchRequestProduct
