@@ -41,6 +41,7 @@ import FSStockmanRequestView from './pages/FS_Stockman_RequestView';
 import FsManagerRequestHistory from './pages/fs_manager_requesthistory';
 import FS_Manager_Request_list from './pages/FS_Manager_Request_list';
 import FS_Manager_Request_detail from './pages/FS_Manager_Request_detail';
+import ReadyPhotosPage from './components/ReadyPhotos2';
 
 const AppContent = ({ isAuthenticated, user }) => {
   const location = useLocation();
@@ -51,7 +52,7 @@ const AppContent = ({ isAuthenticated, user }) => {
   }
 
   // Определяем маршруты, где не нужно отображать боковую панель
-  const noSidebarRoutes = ['/defect', '/ready-photos', '/current-products-fs', '/barcode-history', '/okz_orders', '/okz_orders/:orderNumber'];
+  const noSidebarRoutes = ['/defect', '/ready-photos', '/ready-photos-2', '/current-products-fs', '/barcode-history', '/okz_orders', '/okz_orders/:orderNumber'];
 
   // Функция для проверки, нужен ли сайдбар на текущем пути
   const shouldShowSidebar = () => {
@@ -94,6 +95,7 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/retoucher-stats" element={isAuthenticated ? <RetoucherStats /> : <Navigate to="/login" />} />
         <Route path="/manager-product-stats" element={<ManagerProductStats />} />
         <Route path="/ready-photos" element={<ReadyPhotos />} />
+        <Route path="/ready-photos-2" element={<ReadyPhotosPage />} />
         <Route path="/upload-test" element={<AutoUploadTest />} />
         <Route path="/okz_list" element={isAuthenticated ? <OkzOrderTable /> : <Navigate to="/login" />} />
         <Route path="/okz_orders/:orderNumber" element={isAuthenticated ? <OkzOrderView /> : <Navigate to="/login" />} />

@@ -42,4 +42,5 @@ urlpatterns = [
     path('r/update-retouch-status/', views.UpdateRetouchStatusView.as_view(), name='update-retouch-status'),
     path('sr/update-sretouch-status/', views.UpdateSRetouchStatusView.as_view(), name='update-sretouch-status'),
     path('r/update-rr-status/', views.UpdateRetouchRequestStatusView.as_view(), name='update-rr-status'),
+    path('ready-photos/', views.ReadyPhotosListView.as_view(), name='ready-photos-list'),
 ]

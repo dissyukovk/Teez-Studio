@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import './ReadyPhotos.css'; // Assuming your styles are in ReadyPhotos.css
 
-const ReadyPhotos = () => {
+const ReadyPhotos2 = () => {
     const [photos, setPhotos] = useState([]);
     const [barcode, setBarcode] = useState('');
     const [sellerId, setSellerId] = useState('');
@@ -16,7 +16,7 @@ const ReadyPhotos = () => {
     // Fetch paginated data
     const fetchData = async () => {
         try {
-            const response = await axios.get('http://192.168.6.229:8000/public/ready-photos/', {
+            const response = await axios.get('http://192.168.6.15:8000/public/ready-photos/', {
                 params: {
                     barcode: barcode || undefined,
                     seller_id: sellerId || undefined,
@@ -46,7 +46,7 @@ const ReadyPhotos = () => {
     // Download all filtered data as Excel
     const downloadData = async () => {
         try {
-            const response = await axios.get('http://192.168.6.229:8000/public/ready-photos/', {
+            const response = await axios.get('http://192.168.6.15:8000/public/ready-photos/', {
                 params: {
                     barcode: barcode || undefined,
                     seller_id: sellerId || undefined,
@@ -162,4 +162,4 @@ const ReadyPhotos = () => {
     );
 };
 
-export default ReadyPhotos;
+export default ReadyPhotos2;

@@ -673,3 +673,38 @@ class RetouchRequestSetStatusSerializer(serializers.Serializer):
         rr.status = new_status
         rr.save(update_fields=["status"])
         return rr
+
+class ReadyPhotosSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для "готовых фото":
+    - barcode       => product.barcode
+    - product_name  => product.name
+    - seller        => product.seller
+    - retouch_date  => retouch_request.creation_date
+    - retouch_link  => retouch_link
+    """
+    barcode = serializers.CharField(
+        source='st_request_product.product.barcode', read_only=True
+    )
+    product_name = serializers.CharField(
+        source='st_request_product.product.name', read_only=True
+    )
+    seller = serializers.IntegerField(
+        source='st_request_product.product.seller', read_only=True
+    )
+    retouch_date = serializers.DateTimeField(
+        source='retouch_request.creation_date', read_only=True
+    )
+    retouch_link = serializers.CharField(
+        source='retouch_link', read_only=True
+    )
+
+    class Meta:
+        model = RetouchRequestProduct
+        fields = [
+            'barcode',
+            'product_name',
+            'seller',
+            'retouch_date',
+            'retouch_link',
+        ]

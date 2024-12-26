@@ -16,3 +16,8 @@ class RetouchRequestPagination(PageNumberPagination):
     page_size = 50             # По умолчанию 50
     page_size_query_param = 'page_size'
     max_page_size = 2000
+
+class ReadyPhotosPagination(PageNumberPagination):
+    page_size = 100             # дефолт
+    page_size_query_param = 'page_size'
+    max_page_size = 200000     # максимальный размер
