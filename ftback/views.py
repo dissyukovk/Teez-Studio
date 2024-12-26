@@ -27,7 +27,10 @@ from core.models import (
     STRequestProduct,
     PhotoStatus,
     STRequestPhotoTime,
-    RetouchRequest
+    RetouchRequest,
+    RetouchRequestProduct,
+    RetouchStatus,
+    SRetouchStatus,
 )
 from .serializers import (
     UserProfileSerializer,
@@ -48,7 +51,12 @@ from .serializers import (
     SRRetouchRequestSerializer,
     RetouchRequestListSerializer,
     RetouchRequestDetailSerializer,
-    RetouchRequestAssignSerializer
+    RetouchRequestAssignSerializer,
+    RetouchStatusSerializer,
+    SRetouchStatusSerializer,
+    RetouchStatusUpdateSerializer,
+    SRetouchStatusUpdateSerializer,
+    RetouchRequestSetStatusSerializer
 )
 
 # CRUD для UserProfile
@@ -693,4 +701,84 @@ class SRRetouchRequestAssignView(APIView):
             "request_number": retouch_request.RequestNumber,
             "retoucher": f"{retouch_request.retoucher.first_name} {retouch_request.retoucher.last_name if retouch_request.retoucher else ''}",
             "status_id": retouch_request.status_id
+        }, status=status.HTTP_200_OK)
+
+class RetouchStatusListView(generics.ListAPIView):
+    serializer_class = RetouchStatusSerializer
+    
+    def get_queryset(self):
+        return RetouchStatus.objects.all()
+
+class SRetouchStatusListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = SRetouchStatusSerializer
+    
+    def get_queryset(self):
+        return SRetouchStatus.objects.all()
+
+class UpdateRetouchStatusView(APIView):
+    """
+    POST /ft/retoucher/update-retouch-status/
+    body: {
+      "request_number": 123,
+      "barcode": "1234567890123",
+      "retouch_status_id": 2,
+      "retouch_link": "http://..."   # опционально
+    }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = RetouchStatusUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        rrp = serializer.save()  # retouch_request_product
+        return Response({
+            "detail": "Retouch status updated successfully",
+            "retouch_request_number": rrp.retouch_request.RequestNumber,
+            "barcode": rrp.st_request_product.product.barcode,
+            "retouch_status": rrp.retouch_status.name if rrp.retouch_status else None,
+            "retouch_link": rrp.retouch_link
+        }, status=status.HTTP_200_OK)
+
+
+class UpdateSRetouchStatusView(APIView):
+    """
+    POST /ft/retoucher/update-sretouch-status/
+    body: {
+      "request_number": 123,
+      "barcode": "1234567890123",
+      "sretouch_status_id": 3,
+      "comment": "Lorem ipsum"   # опционально
+    }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = SRetouchStatusUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        rrp = serializer.save()
+        return Response({
+            "detail": "SRetouch status updated successfully",
+            "retouch_request_number": rrp.retouch_request.RequestNumber,
+            "barcode": rrp.st_request_product.product.barcode,
+            "sretouch_status": rrp.sretouch_status.name if rrp.sretouch_status else None,
+            "comment": rrp.comment
+        }, status=status.HTTP_200_OK)
+
+class UpdateRetouchRequestStatusView(APIView):
+    """
+    POST /ft/r/update-rr-status/
+    body: { "request_number": 123, "status_id": 2 }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = RetouchRequestSetStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        rr = serializer.save()  # обновили статус
+        
+        return Response({
+            "detail": "RetouchRequest status updated successfully",
+            "request_number": rr.RequestNumber,
+            "status_id": rr.status_id,
         }, status=status.HTTP_200_OK)

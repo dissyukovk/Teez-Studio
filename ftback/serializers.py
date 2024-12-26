@@ -15,6 +15,8 @@ from core.models import(
     RetouchRequest,
     RetouchRequestProduct,
     RetouchRequestStatus,
+    RetouchStatus,
+    SRetouchStatus,
 )
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -452,14 +454,28 @@ class RetouchRequestDetailSerializer(serializers.ModelSerializer):
                 continue  # Пропускаем, если нет st_request_product
             p = st_rp.product
 
+            # Учитываем, что retouch_status и sretouch_status могут быть None
+            retouch_status_dict = None
+            if rrp.retouch_status:
+                retouch_status_dict = {
+                    'id': rrp.retouch_status.id,
+                    'name': rrp.retouch_status.name,
+                }
+            sretouch_status_dict = None
+            if rrp.sretouch_status:
+                sretouch_status_dict = {
+                    'id': rrp.sretouch_status.id,
+                    'name': rrp.sretouch_status.name,
+                }
+
             items.append({
                 'barcode': p.barcode,
                 'name': p.name,
                 'category': p.category.name if p.category else None,
                 'reference_link': p.category.reference_link if p.category else None,
                 'photos_link': st_rp.photos_link,  # ссылка на исходники
-                'retouch_status': rrp.retouch_status.name if rrp.retouch_status else None,
-                'sretouch_status': rrp.sretouch_status.name if rrp.sretouch_status else None,
+                'retouch_status': retouch_status_dict,
+                'sretouch_status': sretouch_status_dict,
                 'comment': rrp.comment,
                 'retouch_link': rrp.retouch_link,
             })
@@ -505,3 +521,155 @@ class RetouchRequestAssignSerializer(serializers.Serializer):
 
         retouch_request.save(update_fields=['retoucher', 'status'])
         return retouch_request
+
+class RetouchStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RetouchStatus
+        fields = ['id', 'name']
+
+class SRetouchStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SRetouchStatus
+        fields = ['id', 'name']
+
+class RetouchStatusUpdateSerializer(serializers.Serializer):
+    request_number = serializers.IntegerField()
+    barcode = serializers.CharField()
+    retouch_status_id = serializers.IntegerField()
+    retouch_link = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def validate(self, attrs):
+        request_number = attrs.get("request_number")
+        barcode = attrs.get("barcode")
+        retouch_status_id = attrs.get("retouch_status_id")
+        retouch_link = attrs.get("retouch_link")
+
+        # Ищем заявку по RequestNumber
+        try:
+            retouch_request = RetouchRequest.objects.get(RequestNumber=request_number)
+        except RetouchRequest.DoesNotExist:
+            raise serializers.ValidationError({"request_number": "Retouch request not found."})
+
+        # Ищем RetouchRequestProduct (через связку)
+        try:
+            rrp = RetouchRequestProduct.objects.select_related("st_request_product__product").get(
+                retouch_request=retouch_request,
+                st_request_product__product__barcode=barcode
+            )
+        except RetouchRequestProduct.DoesNotExist:
+            raise serializers.ValidationError({"barcode": "RetouchRequestProduct not found for this request/barcode."})
+
+        # Проверяем корректность retouch_status_id
+        try:
+            new_status = RetouchStatus.objects.get(id=retouch_status_id)
+        except RetouchStatus.DoesNotExist:
+            raise serializers.ValidationError({"retouch_status_id": "RetouchStatus does not exist."})
+
+        attrs["retouch_request"] = retouch_request
+        attrs["rrp"] = rrp
+        attrs["new_status"] = new_status
+
+        return attrs
+
+    def create(self, validated_data):
+        rrp = validated_data["rrp"]
+        new_status = validated_data["new_status"]
+        retouch_link = validated_data.get("retouch_link")
+
+        # Обновляем retouch_status
+        rrp.retouch_status = new_status
+
+        # Если есть retouch_link, сохраняем
+        if retouch_link and retouch_link.strip():
+            rrp.retouch_link = retouch_link.strip()
+
+            # дублируем в product.retouch_link
+            product = rrp.st_request_product.product
+            product.retouch_link = retouch_link.strip()
+            product.save(update_fields=["retouch_link"])
+
+        rrp.save(update_fields=["retouch_status", "retouch_link"])
+        return rrp
+
+
+class SRetouchStatusUpdateSerializer(serializers.Serializer):
+    request_number = serializers.IntegerField()
+    barcode = serializers.CharField()
+    sretouch_status_id = serializers.IntegerField()
+    comment = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def validate(self, attrs):
+        request_number = attrs.get("request_number")
+        barcode = attrs.get("barcode")
+        sretouch_status_id = attrs.get("sretouch_status_id")
+
+        # Ищем заявку по RequestNumber
+        try:
+            retouch_request = RetouchRequest.objects.get(RequestNumber=request_number)
+        except RetouchRequest.DoesNotExist:
+            raise serializers.ValidationError({"request_number": "Retouch request not found."})
+
+        # Ищем RetouchRequestProduct (через связку)
+        try:
+            rrp = RetouchRequestProduct.objects.select_related("st_request_product__product").get(
+                retouch_request=retouch_request,
+                st_request_product__product__barcode=barcode
+            )
+        except RetouchRequestProduct.DoesNotExist:
+            raise serializers.ValidationError({"barcode": "RetouchRequestProduct not found for this request/barcode."})
+
+        # Проверяем корректность sretouch_status_id
+        try:
+            new_status = SRetouchStatus.objects.get(id=sretouch_status_id)
+        except SRetouchStatus.DoesNotExist:
+            raise serializers.ValidationError({"sretouch_status_id": "SRetouchStatus does not exist."})
+
+        attrs["rrp"] = rrp
+        attrs["new_status"] = new_status
+        return attrs
+
+    def create(self, validated_data):
+        rrp = validated_data["rrp"]
+        new_status = validated_data["new_status"]
+        comment = validated_data.get("comment")
+
+        # Обновляем sretouch_status
+        rrp.sretouch_status = new_status
+
+        if comment and comment.strip():
+            rrp.comment = comment.strip()
+
+        rrp.save(update_fields=["sretouch_status", "comment"])
+        return rrp
+
+class RetouchRequestSetStatusSerializer(serializers.Serializer):
+    request_number = serializers.IntegerField()
+    status_id = serializers.IntegerField()
+
+    def validate(self, attrs):
+        request_number = attrs.get('request_number')
+        status_id = attrs.get('status_id')
+
+        # 1) Проверяем, есть ли в базе заявка с таким номером
+        try:
+            rr = RetouchRequest.objects.get(RequestNumber=request_number)
+        except RetouchRequest.DoesNotExist:
+            raise serializers.ValidationError({"request_number": "RetouchRequest not found."})
+
+        # 2) Проверяем, есть ли такой статус
+        try:
+            new_status = RetouchRequestStatus.objects.get(id=status_id)
+        except RetouchRequestStatus.DoesNotExist:
+            raise serializers.ValidationError({"status_id": "RetouchRequestStatus not found."})
+
+        attrs["retouch_request"] = rr
+        attrs["new_status"] = new_status
+        return attrs
+
+    def create(self, validated_data):
+        rr = validated_data["retouch_request"]
+        new_status = validated_data["new_status"]
+        
+        rr.status = new_status
+        rr.save(update_fields=["status"])
+        return rr
