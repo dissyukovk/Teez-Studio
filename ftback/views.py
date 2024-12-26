@@ -29,6 +29,7 @@ from core.models import (
     STRequestPhotoTime,
     RetouchRequest,
     RetouchRequestProduct,
+    RetouchRequestStatus,
     RetouchStatus,
     SRetouchStatus,
 )
@@ -743,20 +744,43 @@ class UpdateRetouchStatusView(APIView):
 
 class UpdateSRetouchStatusView(APIView):
     """
-    POST /ft/retoucher/update-sretouch-status/
+    POST /ft/sr/update-sretouch-status/
     body: {
       "request_number": 123,
       "barcode": "1234567890123",
-      "sretouch_status_id": 3,
-      "comment": "Lorem ipsum"   # опционально
+      "sretouch_status_id": 1 or 2,
+      "comment": "Описание правок" (опционально)
     }
+    Если sretouch_status_id=1 (Проверено), проверяем, не остались ли null или ≠1 у товаров.
+    Если все стали 1 => ставим RetouchRequest.status_id=5 (или под вашу логику).
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         serializer = SRetouchStatusUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        rrp = serializer.save()
+        rrp = serializer.save()  # RetouchRequestProduct
+
+        # Если sretouch_status == 1 ("Проверено"), проверяем все товары
+        if rrp.sretouch_status_id == 1:
+            retouch_request = rrp.retouch_request
+            all_products = retouch_request.retouch_products.all()
+
+            # Проверяем, что нет null: sretouch_status_id IS NOT NULL
+            # и нет значений ≠1
+            # Если всё 1 => ставим retouch_request.status_id=5 (к примеру)
+            if (all_products.exists() and
+                all_products.filter(sretouch_status_id__isnull=True).count() == 0 and
+                all_products.exclude(sretouch_status_id=1).count() == 0):
+
+                # Меняем статус заявки
+                try:
+                    new_status = RetouchRequestStatus.objects.get(id=5)
+                    retouch_request.status = new_status
+                    retouch_request.save(update_fields=["status"])
+                except RetouchRequestStatus.DoesNotExist:
+                    pass
+
         return Response({
             "detail": "SRetouch status updated successfully",
             "retouch_request_number": rrp.retouch_request.RequestNumber,
