@@ -283,3 +283,10 @@ class STRequestPhotoTime(models.Model):
 
     def __str__(self):
         return f"Photo time for {self.st_request_product} at {self.photo_date} by {self.user}"
+
+class Blocked_Shops(models.Model):
+    id = models.IntegerField(primary_key=True)
+    shop_id = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name

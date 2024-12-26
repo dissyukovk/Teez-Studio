@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import STRequest, Product, Invoice, ProductMoveStatus, ProductCategory, Product, Order, OrderProduct, OrderStatus, STRequestProduct, ProductOperation, ProductOperationTypes, InvoiceProduct, RetouchStatus, STRequestStatus, UserURLs, STRequestHistory, STRequestHistoryOperations
+from .models import STRequest, Product, Invoice, ProductMoveStatus, ProductCategory, Product, Order, OrderProduct, OrderStatus, STRequestProduct, ProductOperation, ProductOperationTypes, InvoiceProduct, RetouchStatus, STRequestStatus, UserURLs, STRequestHistory, STRequestHistoryOperations, Blocked_Shops
 from .forms import STRequestForm
 from django.contrib.auth.decorators import login_required
 from rest_framework import viewsets, status, serializers, generics, permissions
@@ -1337,16 +1337,20 @@ def check_barcodes(request):
 @permission_classes([IsAuthenticated])
 def create_order(request):
     try:
+        # Собираем список всех shop_id из Blocked_Shops
+        blocked_shop_ids = Blocked_Shops.objects.values_list('shop_id', flat=True)
+
         # Получаем штрихкоды из запроса
         barcodes = request.data.get('barcodes', [])
-
-        # Проверяем, что все штрихкоды существуют в базе данных Product
         missing_barcodes = []
         valid_products = []
-        
+
         for barcode in barcodes:
             product = Product.objects.filter(barcode=barcode).first()
             if product:
+                # Если seller есть в списке заблокированных, пропускаем этот товар
+                if product.seller is not None and product.seller in blocked_shop_ids:
+                    continue
                 valid_products.append(product)
             else:
                 missing_barcodes.append(barcode)
@@ -1357,19 +1361,25 @@ def create_order(request):
                 'error': 'Некоторые штрихкоды не найдены в базе данных.',
                 'missing_barcodes': missing_barcodes
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
+        # Проверяем, нужно ли устанавливать приоритет
+        # Вариант A: если просто наличие 'priority' в теле запроса подразумевает True
+        # priority_flag = request.data.get('priority', False)
+        #
+        # Вариант B: более явная проверка значения на истину
+        priority_flag = request.data.get('priority', False)
+        # Если priority_flag == True (или "true"/"True"), значит ставим приоритет
+        # Можно использовать строгую проверку, если хотим, чтобы priority был именно bool
+        # if str(priority_flag).lower() == 'true':
+
         # Генерация нового номера заказа с проверкой уникальности
         last_order = Order.objects.aggregate(Max('OrderNumber'))
         new_order_number = int(last_order['OrderNumber__max'] or 0) + 1
 
-        # Повторно проверяем на случай коллизий
         while Order.objects.filter(OrderNumber=new_order_number).exists():
-            new_order_number += 1  # Если такой номер уже есть, увеличиваем на 1
+            new_order_number += 1
 
-        # Получаем текущую дату и время
         current_date = timezone.now()
-
-        # Получаем текущего пользователя
         creator_id = request.user.id
 
         # Создаем новый заказ
@@ -1377,21 +1387,32 @@ def create_order(request):
             OrderNumber=new_order_number,
             date=current_date,
             creator_id=creator_id,
-            status_id=2  # Устанавливаем статус на 2
+            status_id=2  # "Новый" или иной статус
         )
 
-        # Привязываем штрихкоды к созданному заказу через OrderProduct
+        # Если приоритет нужно ставить, проставляем для всех валидных продуктов
+        # Способ 1: через bulk_update (оптимальнее при больших списках)
+        if str(priority_flag).lower() == 'true':
+            Product.objects.filter(pk__in=[p.pk for p in valid_products]).update(priority=True)
+        # Если же нам нужно оставить гибкость, и priority может быть не только True/False,
+        # а, например, числовые значения, нужна другая логика.
+
+        # Привязываем штрихкоды к заказу (OrderProduct)
         for product in valid_products:
+            # Если используете bulk_update, то приоритет уже проставлен в базе
+            # или же, если хотите поштучно:
+            # if str(priority_flag).lower() == 'true':
+            #     product.priority = True
+            #     product.save()
+
             OrderProduct.objects.create(order=order, product=product)
 
-        # Сериализация и возврат данных нового заказа
         serializer = OrderSerializer(order)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     except Exception as e:
         print(f"Error creating order: {e}")
         return Response({'error': 'Ошибка при создании заказа'}, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

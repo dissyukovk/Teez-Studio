@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
-from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct, SPhotoStatus, STRequestPhotoTime
+from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct, SPhotoStatus, STRequestPhotoTime, Blocked_Shops
 
 
 
@@ -244,3 +244,7 @@ class STRequestPhotoTimeAdmin(admin.ModelAdmin):
         # Убедитесь, что поле называется product
         return obj.st_request_product.product.barcode if obj.st_request_product and obj.st_request_product.product else None
     product_barcode.short_description = "Product Barcode"
+
+@admin.register(Blocked_Shops)
+class BlockedShopsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'shop_id')

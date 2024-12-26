@@ -54,12 +54,15 @@ const getOrderDetails = async (orderNumber) => {
 };
 
 // Функция для создания нового заказа
-const createOrder = async (barcodes) => {
+const createOrder = async (barcodes, priority = false) => {
   try {
-    const response = await axios.post(`${API_URL}api/orders/create/`, { barcodes }, {
-      headers: getAuthHeaders(),  // Добавляем заголовок с токеном
-    });
-    return response.data;  // Предполагаем, что API возвращает информацию о новом заказе
+    // Передаём не только barcodes, но и флаг priority
+    const response = await axios.post(
+      `${API_URL}api/orders/create/`,
+      { barcodes, priority }, 
+      { headers: getAuthHeaders() }
+    );
+    return response.data;
   } catch (error) {
     console.error('Ошибка при создании заказа:', error);
     throw error;
