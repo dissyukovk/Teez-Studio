@@ -68,7 +68,8 @@ from .views import (
     StockmanListView,
     ReadyPhotosView,
     UserURLsViewSet,
-    STRequestHistoryViewSet
+    STRequestHistoryViewSet,
+    accepted_products_by_category
 )
 
 class UserDetailView(APIView):
@@ -119,6 +120,7 @@ urlpatterns = [
     path('api/photographer-stats/', PhotographerStatsView.as_view(), name='photographer-stats'),
     path('api/retoucher-stats/', RetoucherStatsView.as_view(), name='retouch-stats'),
     path('', include(router.urls)),
+    path('api/category-counts/', accepted_products_by_category, name='category-counts'),
 
     # Основные API
     path('api/products/', product_list, name='product-list'),
