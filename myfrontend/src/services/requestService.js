@@ -6,7 +6,7 @@ const getAuthHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-const API_URL = 'http://192.168.6.15:8000/';  // Убедитесь, что URL правильный
+const API_URL = 'http://192.168.7.230:8000/';  // Убедитесь, что URL правильный
 
 const getRequests = async ({
   status = '', 

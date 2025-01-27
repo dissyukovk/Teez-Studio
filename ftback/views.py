@@ -1,3 +1,4 @@
+from datetime import date, timedelta, datetime
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.models import Group, User
 from django_filters.rest_framework import DjangoFilterBackend
@@ -12,7 +13,6 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import generics, permissions, status, filters
 from .pagination import StandardResultsSetPagination, SRReadyProductsPagination, RetouchRequestPagination, ReadyPhotosPagination
-from datetime import date, timedelta
 from .filters import SRReadyProductFilter
 from core.models import (
     UserProfile,
@@ -39,6 +39,7 @@ from core.models import (
     RetouchRequestStatus,
     RetouchStatus,
     SRetouchStatus,
+    Nofoto
 )
 from .serializers import (
     UserProfileSerializer,
@@ -1146,6 +1147,7 @@ def strequest_create(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def nofoto_create(request):
     """
     Эндпоинт для фиксации 'нет фото' по конкретному товару (по штрихкоду).
@@ -1158,7 +1160,6 @@ def nofoto_create(request):
        Удалить каждую из них, при этом перед удалением
        добавить запись в STRequestHistory (operation=2).
     """
-    permission_classes = [permissions.IsAuthenticated]
     serializer = NofotoCreateSerializer(data=request.data)
     if serializer.is_valid():
         barcode = serializer.validated_data['barcode']

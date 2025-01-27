@@ -16,7 +16,7 @@ const ReadyPhotos2 = () => {
     // Fetch paginated data
     const fetchData = async () => {
         try {
-            const response = await axios.get('http://192.168.6.15:8000/public/ready-photos/', {
+            const response = await axios.get('http://192.168.7.230:8000/public/ready-photos/', {
                 params: {
                     barcode: barcode || undefined,
                     seller_id: sellerId || undefined,
@@ -46,7 +46,7 @@ const ReadyPhotos2 = () => {
     // Download all filtered data as Excel
     const downloadData = async () => {
         try {
-            const response = await axios.get('http://192.168.6.15:8000/public/ready-photos/', {
+            const response = await axios.get('http://192.168.7.230:8000/public/ready-photos/', {
                 params: {
                     barcode: barcode || undefined,
                     seller_id: sellerId || undefined,

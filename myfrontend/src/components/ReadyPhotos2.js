@@ -82,7 +82,7 @@ const ReadyPhotosPage = () => {
         params.seller = seller.trim();
       }
 
-      const response = await axios.get('http://192.168.6.15:8000/ft/ready-photos/', { params });
+      const response = await axios.get('http://192.168.7.230:8000/ft/ready-photos/', { params });
       const results = response.data.results || [];
       setData(results);
       setTotalCount(response.data.count || 0);
@@ -145,7 +145,7 @@ const ReadyPhotosPage = () => {
         params.seller = seller.trim();
       }
 
-      const resp = await axios.get('http://192.168.6.15:8000/ft/ready-photos/', { params });
+      const resp = await axios.get('http://192.168.7.230:8000/ft/ready-photos/', { params });
       const allResults = resp.data.results || [];
 
       // Формируем массив для Excel

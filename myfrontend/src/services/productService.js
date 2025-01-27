@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.6.15:8000/';  // Убедитесь, что это правильный URL
+const API_URL = 'http://192.168.7.230:8000/';  // Убедитесь, что это правильный URL
 
 // Получаем токен из localStorage
 const getAuthHeaders = () => {

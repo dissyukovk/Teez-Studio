@@ -25,7 +25,7 @@ from django.utils import timezone
 import logging
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 # Настраиваем логирование
@@ -2116,56 +2116,45 @@ def accepted_products_by_category(request):
     return JsonResponse(data, safe=False)
 
 class NofotoListView(ListAPIView):
-    """
-    Эндпоинт (GET) без аутентификации:
-    - Возвращает список записей Nofoto с полями Barcode, Name, Shop_id, Дата
-    - Фильтрация по любым полям (barcode, product__name, product__seller, date и т.д.)
-    - Фильтрация по дате (start_date, end_date)
-    - Сортировка (параметр ?ordering=...)
-    - Пагинация (page_size=100 по умолчанию, max=100000)
-    """
     permission_classes = [AllowAny]
     serializer_class = NofotoListSerializer
     pagination_class = NofotoPagination
 
     queryset = Nofoto.objects.all()
-
-    filter_backends = [
-        DjangoFilterBackend,
-        SearchFilter,
-        OrderingFilter,
-    ]
-    # Здесь указываем поля, по которым хотим уметь фильтровать напрямую (exact match)
-    filterset_fields = [
-        'product__barcode',
-        'product__name',
-        'product__seller',
-        'date',
-    ]
-    # Указываем поля, по которым можно искать (для SearchFilter),
-    # например, по имени товара или штрихкоду:
-    search_fields = [
-        'product__barcode',
-        'product__name',
-    ]
-    # Указываем поля, по которым можно сортировать (для OrderingFilter).
-    # При желании можно добавить 'product__barcode', 'product__seller', 'date', 'product__name'
-    ordering_fields = [
-        'date',
-        'product__barcode',
-        'product__seller',
-        'product__name',
-    ]
-    # По умолчанию можно задать
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['product__barcode', 'product__name', 'product__seller', 'date']
+    search_fields = ['product__barcode', 'product__name']
+    ordering_fields = ['date', 'product__barcode', 'product__seller', 'product__name']
     ordering = ['-date']
 
     def get_queryset(self):
         qs = super().get_queryset()
-        # Можем отфильтровать по дате (start_date, end_date).
-        start_date = self.request.query_params.get('start_date')
-        end_date = self.request.query_params.get('end_date')
-        if start_date:
-            qs = qs.filter(date__gte=start_date)
-        if end_date:
-            qs = qs.filter(date__lte=end_date)
+
+        start_date_str = self.request.query_params.get('start_date')
+        end_date_str   = self.request.query_params.get('end_date')
+
+        # 1) Фильтр по дате "с ... "
+        if start_date_str:
+            try:
+                start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
+                qs = qs.filter(date__gte=start_dt)
+            except ValueError:
+                pass  # Можно вернуть ошибку или проигнорировать
+
+        # 2) Фильтр по дате "... по"
+        #    Прибавляем +1 день и используем < (strictly less), чтобы включить
+        #    записи за весь этот день по локальному времени.
+        if end_date_str:
+            try:
+                end_dt = datetime.strptime(end_date_str, "%Y-%m-%d") + timedelta(days=1)
+                qs = qs.filter(date__lt=end_dt)
+            except ValueError:
+                pass
+
+        # 3) Фильтр по штрихкодам (через параметр ?barcodes=111,222)
+        barcodes_str = self.request.query_params.get('barcodes')
+        if barcodes_str:
+            splitted = [bc.strip() for bc in barcodes_str.split(',') if bc.strip()]
+            qs = qs.filter(product__barcode__in=splitted)
+
         return qs

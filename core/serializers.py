@@ -227,21 +227,22 @@ class STRequestHistorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class NofotoListSerializer(serializers.ModelSerializer):
-    """
-    Сериалайзер для вывода данных из таблицы Nofoto
-    в формате:
-    {
-      "Barcode": ...,  # из Product.barcode
-      "Name": ...,     # из Product.name
-      "Shop_id": ...,  # из Product.seller
-      "Дата": ...      # из Nofoto.date
-    }
-    """
-    Barcode = serializers.CharField(source='product.barcode')
-    Name = serializers.CharField(source='product.name')
-    Shop_id = serializers.IntegerField(source='product.seller', allow_null=True)
-    Дата = serializers.DateTimeField(source='date')
+    # Берём штрихкод из связанного товара
+    barcode = serializers.CharField(source='product.barcode', read_only=True)
+    # Наименование
+    name = serializers.CharField(source='product.name', read_only=True)
+    # Магазин (seller). Можно назвать "shop_id" или "shop"
+    shop = serializers.IntegerField(source='product.seller', read_only=True)
+    # Пользователь, внёсший запись (если нужно)
+    user = serializers.CharField(source='user.username', read_only=True)
 
     class Meta:
         model = Nofoto
-        fields = ('Barcode', 'Name', 'Shop_id', 'Дата')
+        fields = [
+            'id',
+            'barcode',
+            'name',
+            'shop',
+            'date',
+            'user',
+        ]
