@@ -111,6 +111,7 @@ class Order(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assembly_user'
     )  # Пользователь, который сделал сборку
     accept_date = models.DateTimeField(null=True, blank=True)  # Дата приемки
+    accept_date_end = models.DateTimeField(null=True, blank=True)
     accept_user = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='accept_user'
     )  # Пользователь, который принял товар
@@ -289,4 +290,15 @@ class Blocked_Shops(models.Model):
     shop_id = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
-        return self.name
+        return str(self.shop_id)
+
+class Nofoto(models.Model):
+    """
+    Модель для фиксации случаев, когда по товару нет фото.
+    """
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)
+    date = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Nofoto: {self.product.barcode} - {self.user.username}"

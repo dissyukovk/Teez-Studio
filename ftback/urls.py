@@ -44,4 +44,10 @@ urlpatterns = [
     path('r/update-rr-status/', views.UpdateRetouchRequestStatusView.as_view(), name='update-rr-status'),
     path('ready-photos/', views.ReadyPhotosListView.as_view(), name='ready-photos-list'),
     path('sr-statistic/', views.SRStatisticView.as_view(), name='sr-statistic'),
+    path('stockman_income/', views.stockman_income, name='stockman_income'),
+    path('stockman_outcome/', views.stockman_outcome, name='stockman_outcome'),
+    path('stockman_defect/', views.stockman_defect, name='stockman_defect'),
+    path('stockman_opened/', views.stockman_opened, name='stockman_opened'),
+    path('stockman_create_strequest/', views.strequest_create, name='create_strequest'),
+    path('nofoto/', views.nofoto_create, name='nofoto_create'),
 ]

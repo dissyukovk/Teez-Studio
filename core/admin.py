@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
-from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct, SPhotoStatus, STRequestPhotoTime, Blocked_Shops
+from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct, SPhotoStatus, STRequestPhotoTime, Blocked_Shops, Nofoto
 
 
 
@@ -248,3 +248,11 @@ class STRequestPhotoTimeAdmin(admin.ModelAdmin):
 @admin.register(Blocked_Shops)
 class BlockedShopsAdmin(admin.ModelAdmin):
     list_display = ('id', 'shop_id')
+
+@admin.register(Nofoto)
+class NofotoAdmin(admin.ModelAdmin):
+    list_display = ('product', 'date', 'user')
+    list_filter = ('date',)
+    search_fields = ('product__barcode', 'product__name', 'user__username')
+    date_hierarchy = 'date'
+    ordering = ('-date',)

@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework import generics, permissions, status, filters
 from .pagination import StandardResultsSetPagination, SRReadyProductsPagination, RetouchRequestPagination, ReadyPhotosPagination
 from datetime import date, timedelta
@@ -16,10 +17,16 @@ from .filters import SRReadyProductFilter
 from core.models import (
     UserProfile,
     Product,
+    ProductOperation,
+    ProductMoveStatus,
     STRequest,
     STRequestStatus,
     STRequestProduct,
+    STRequestHistory,
+    STRequestHistoryOperations,
     Product,
+    ProductOperation,
+    ProductOperationTypes,
     PhotoStatus,
     SPhotoStatus,
     UserProfile,
@@ -59,6 +66,12 @@ from .serializers import (
     SRetouchStatusUpdateSerializer,
     RetouchRequestSetStatusSerializer,
     ReadyPhotosSerializer,
+    StockmanIncomeSerializer,
+    StockmanOutcomeSerializer,
+    StockmanDefectSerializer,
+    StockmanOpenedSerializer,
+    STRequestCreateSerializer,
+    NofotoCreateSerializer
 )
 
 # CRUD для UserProfile
@@ -862,12 +875,11 @@ class ReadyPhotosListView(generics.ListAPIView):
 class SRStatisticView(APIView):
     """
     GET /ft/sr-statistic/?date=YYYY-MM-DD
-    Выдаёт список пользователей (retouchers) и кол-во обработанных 
-    (retouch_status=2 и sretouch_status=1) продуктов в указанную дату.
-    Дата проверяется по RetouchRequest.retouch_date (или creation_date — выберите логику).
+    Выдаёт список пользователей (ретушеров) и кол-во обработанных 
+    (retouch_status=2 и sretouch_status=1) продуктов на заданную дату.
+    Дата проверяется по RetouchRequest.retouch_date.
     Сортируем по first_name, last_name.
     """
-
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
@@ -876,46 +888,24 @@ class SRStatisticView(APIView):
         if not date_str:
             return Response({"error": "Parameter 'date' is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Преобразуем в datetime.date
-        # Можно ещё ловить исключения.
-        from datetime import datetime
         try:
             date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
         except ValueError:
-            return Response({"error": "Invalid date format, expected YYYY-MM-DD."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Invalid date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Фильтруем RetouchRequestProduct:
         # retouch_status=2 (Готов), sretouch_status=1 (Проверено).
-        # Плюс внутри связанного RetouchRequest смотрим retouch_date (или creation_date) == date_obj
-        # Допустим, хотим сравнить retouch_date__date == date_obj.
-        # Если retouch_date хранит время, нужно __date-lookup.
-        # Если retouch_date может быть null, учтём это.
-
+        # RetouchRequest.retouch_date__date = date_obj
         qs = RetouchRequestProduct.objects.filter(
             retouch_status_id=2,
             sretouch_status_id=1,
-            retouch_request__creation_date__date=date_obj  # или creation_date__date=date_obj
+            retouch_request__retouch_date__date=date_obj
         ).select_related("retouch_request__retoucher")
 
-        # Группируем по retoucher, считаем кол-во
-        # (User может быть NULL => retoucher_id может быть null, учтём это)
-        # добавим .exclude(retouch_request__retoucher__isnull=True) если нужен только реальный user
+        # Исключаем случаи без ретушёра, если это необходимо
         qs = qs.exclude(retouch_request__retoucher__isnull=True)
 
-        # Annotate:
-        # Сначала нам нужно сгруппировать. Для этого обычно используют values("retouch_request__retoucher") + annotate.
-        # Затем, чтобы достать first_name, last_name — придётся делать join (или отдельный SQL).
-        # Проще будет ниже вручную пройтись.
-        from django.db.models import F
-
-        # Собираем (user_id, count) ... но ещё нужен first_name, last_name
-        # Способ 1: Сгруппировать по retouch_request__retoucher, но потом всё равно 
-        #           придётся вручную доставать User. 
-        # Способ 2: Сразу join к User и group_by user.id:
-        # Django позволяет "through" join: retouch_request__retoucher__id
-        # Annotate(count=Count("id")) — id RetouchRequestProduct
-        # example:
+        # Группируем по ретушёру (User), считаем количество записей
         user_qs = qs.values(
             "retouch_request__retoucher__id",
             "retouch_request__retoucher__first_name",
@@ -924,18 +914,14 @@ class SRStatisticView(APIView):
             done_count=Count("id")
         )
 
-        # Превращаем в Python-список [{...}, {...}, ...], 
-        # потом сортируем по first_name, last_name.
-        # (в теории можно было .order_by("retouch_request__retoucher__first_name", ...)
+        # Превращаем в список и сортируем по first_name, last_name
         user_list = list(user_qs)
-
-        # Сортируем (Python-способ)
         user_list.sort(key=lambda x: (
             x["retouch_request__retoucher__first_name"] or "", 
             x["retouch_request__retoucher__last_name"] or "",
         ))
 
-        # Преобразуем к желаемому выводу
+        # Формируем результат
         result = []
         for row in user_list:
             uid = row["retouch_request__retoucher__id"]
@@ -951,3 +937,284 @@ class SRStatisticView(APIView):
             })
 
         return Response(result, status=status.HTTP_200_OK)
+
+def stockman_income(request):
+    """
+    Эндпоинт для приемки товара (operation type = 3, move_status = 3).
+    - Для каждого штрихкода из запроса:
+      * Проставляем move_status=3
+      * Заполняем income_date текущей датой
+      * Заполняем income_stockman пользователем из запроса
+      * Создаем запись в ProductOperation (operation_type=3)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer = StockmanIncomeSerializer(data=request.data)
+    if serializer.is_valid():
+        barcodes = serializer.validated_data['barcodes']
+        products = Product.objects.filter(barcode__in=barcodes)
+
+        if not products:
+            return Response(
+                {"detail": "По переданным штрихкодам товары не найдены."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Обновляем поля в модели Product
+        for product in products:
+            product.move_status_id = 3  # move_status = 3 (Приемка)
+            product.income_date = timezone.now()
+            product.income_stockman = request.user
+            product.save()
+
+        # Создаем записи в ProductOperation
+        for product in products:
+            ProductOperation.objects.create(
+                product=product,
+                operation_type_id=3,  # Тип операции 3 для приход
+                user=request.user,
+                date=timezone.now()  # Можно не указывать, auto_now_add в модели
+            )
+
+        return Response({"detail": "Товары успешно приняты."}, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+def stockman_outcome(request):
+    """
+    Эндпоинт для отправки товара (operation type = 4, move_status = 4).
+    - Для каждого штрихкода из запроса:
+      * Проставляем move_status=4
+      * Заполняем outcome_date текущей датой
+      * Заполняем outcome_stockman пользователем из запроса
+      * Создаем запись в ProductOperation (operation_type=4)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer = StockmanOutcomeSerializer(data=request.data)
+    if serializer.is_valid():
+        barcodes = serializer.validated_data['barcodes']
+        products = Product.objects.filter(barcode__in=barcodes)
+
+        if not products:
+            return Response(
+                {"detail": "По переданным штрихкодам товары не найдены."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Обновляем поля в модели Product
+        for product in products:
+            product.move_status_id = 4  # move_status = 4 (Отправка)
+            product.outcome_date = timezone.now()
+            product.outcome_stockman = request.user
+            product.save()
+
+        # Создаем записи в ProductOperation
+        for product in products:
+            ProductOperation.objects.create(
+                product=product,
+                operation_type_id=4,  # Тип операции 4 для расход
+                user=request.user,
+                date=timezone.now()
+            )
+
+        return Response({"detail": "Товары успешно отправлены."}, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+def stockman_defect(request):
+    """
+    Эндпоинт для пометки товара как брак (operation type = 25, move_status = 25).
+    - В запросе штрихкод и комментарий
+    - Для товара:
+      * move_status=25
+    - Создаем запись в ProductOperation (operation_type=25, comment=переданный)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer = StockmanDefectSerializer(data=request.data)
+    if serializer.is_valid():
+        barcode = serializer.validated_data['barcode']
+        comment = serializer.validated_data.get('comment', '')
+
+        try:
+            product = Product.objects.get(barcode=barcode)
+        except Product.DoesNotExist:
+            return Response(
+                {"detail": f"Товар со штрихкодом {barcode} не найден."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        product.move_status_id = 25
+        product.save()
+
+        ProductOperation.objects.create(
+            product=product,
+            operation_type_id=25,
+            user=request.user,
+            date=timezone.now(),
+            comment=comment
+        )
+
+        return Response({"detail": "Товар помечен как брак."}, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+def stockman_opened(request):
+    """
+    Эндпоинт для пометки товара как вскрыто (operation type = 30).
+    - В запросе штрихкод
+    - Создаем запись в ProductOperation (operation_type=30, comment="Вскрыто")
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer = StockmanOpenedSerializer(data=request.data)
+    if serializer.is_valid():
+        barcode = serializer.validated_data['barcode']
+
+        try:
+            product = Product.objects.get(barcode=barcode)
+        except Product.DoesNotExist:
+            return Response(
+                {"detail": f"Товар со штрихкодом {barcode} не найден."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        ProductOperation.objects.create(
+            product=product,
+            operation_type_id=30,
+            user=request.user,
+            date=timezone.now(),
+            comment="Вскрыто"
+        )
+
+        return Response({"detail": "Товар помечен как вскрыто."}, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+def get_next_request_number() -> str:
+    """
+    Возвращает следующий номер заявки (строка длиной 13 символов с ведущими нулями).
+    Если записей нет, начинаем с '0000000000001'.
+    Предполагаем, что в RequestNumber хранятся только цифры в виде строки.
+    """
+    max_number = STRequest.objects.aggregate(max_num=Max('RequestNumber'))['max_num']
+    if max_number is None:
+        # Если еще ни одной заявки нет
+        return "0000000000001"
+    try:
+        # Пробуем интерпретировать существующий макс. номер как число
+        next_num_int = int(max_number) + 1
+    except ValueError:
+        # Если вдруг в базе окажется не-числовая строка,
+        # можно либо сгенерировать ошибку, либо начать с 1.
+        next_num_int = 1
+    # Преобразуем в строку, дополненную нулями до длины 13
+    return str(next_num_int).zfill(13)
+
+def strequest_create(request):
+    """
+    Эндпоинт для создания новой заявки STRequest.
+      - Номер RequestNumber формируется автоматически
+      - creation_date ставится текущая (если auto_now_add=True в модели, он сам заполнится)
+      - stockman = request.user
+      - status = 1
+    В ответе возвращается созданный RequestNumber.
+    """
+    serializer = STRequestCreateSerializer(data=request.data)
+    if serializer.is_valid():
+        # Генерируем номер заявки
+        next_request_number = get_next_request_number()
+
+        # Создаем заявку, применяя поля из сериалайзера
+        strequest = STRequest.objects.create(
+            RequestNumber=next_request_number,
+            # creation_date=timezone.now(),  # Не обязательно, если auto_now_add=True
+            stockman=request.user,           # Запоминаем, кто создал
+            **serializer.validated_data
+        )
+
+        # Принудительно устанавливаем статус = 1
+        # Предполагаем, что такая запись (ID=1) в STRequestStatus существует.
+        try:
+            strequest.status = STRequestStatus.objects.get(pk=1)
+        except STRequestStatus.DoesNotExist:
+            return Response(
+                {"detail": "Статус с ID=1 не найден в STRequestStatus."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        strequest.save()
+        
+        # Возвращаем номер заявки
+        return Response(
+            {"RequestNumber": strequest.RequestNumber},
+            status=status.HTTP_201_CREATED
+        )
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def nofoto_create(request):
+    """
+    Эндпоинт для фиксации 'нет фото' по конкретному товару (по штрихкоду).
+    
+    Шаги:
+    1. Создание записи в Nofoto (товар, текущая дата, user).
+    2. Поиск в STRequestProduct всех позиций, где:
+       - Товар = наш Product
+       - STRequest в статусе 3
+       Удалить каждую из них, при этом перед удалением
+       добавить запись в STRequestHistory (operation=2).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer = NofotoCreateSerializer(data=request.data)
+    if serializer.is_valid():
+        barcode = serializer.validated_data['barcode']
+
+        # Ищем товар по штрихкоду
+        try:
+            product = Product.objects.get(barcode=barcode)
+        except Product.DoesNotExist:
+            return Response(
+                {"detail": f"Товар со штрихкодом {barcode} не найден."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 1. Создаём запись в Nofoto
+        Nofoto.objects.create(
+            product=product,
+            user=request.user,
+            # date не указываем вручную, т.к. auto_now_add=True
+        )
+
+        # 2. Удаляем позиции из STRequestProduct, где STRequest в статусе 3.
+        #    Перед удалением сохраняем запись в STRequestHistory.
+        
+        strequest_products_qs = STRequestProduct.objects.filter(
+            product=product,
+            request__status_id=3
+        )
+
+        # Опционально: если нужно проверить, что есть хотя бы одна такая запись
+        # if not strequest_products_qs.exists():
+        #     pass  # Либо вернуть предупреждение, либо ничего
+
+        # Убедимся, что операция с ID=2 существует
+        # (если уверены, что существует — можно пропустить проверку)
+        try:
+            operation_del = STRequestHistoryOperations.objects.get(pk=2)
+        except STRequestHistoryOperations.DoesNotExist:
+            return Response(
+                {"detail": "Не найдена операция STRequestHistoryOperations c ID=2."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Для каждой строки strequestproduct создаём запись в истории
+        for strequestproduct in strequest_products_qs:
+            STRequestHistory.objects.create(
+                st_request=strequestproduct.request,
+                product=strequestproduct.product,
+                user=request.user,
+                # date = timezone.now(),  # можно указать явно, но в модели стоит auto_now_add
+                operation=operation_del
+            )
+
+        # После записи в историю удаляем из STRequestProduct
+        strequest_products_qs.delete()
+
+        return Response({"detail": "Запись Nofoto создана, товары удалены из STRequestProduct, история обновлена."},
+                        status=status.HTTP_200_OK)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

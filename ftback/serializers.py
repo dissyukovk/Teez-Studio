@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.db.models import Max, Sum, Q, Count
+from django.utils import timezone
 from django.contrib.auth.models import User
 from core.models import(
     UserProfile,
@@ -7,7 +8,11 @@ from core.models import(
     STRequest,
     STRequestProduct,
     STRequestStatus,
+    STRequestHistory,
+    STRequestHistoryOperations,
     Product,
+    ProductOperation,
+    ProductOperationTypes,
     PhotoStatus,
     SPhotoStatus,
     ProductCategory,
@@ -669,9 +674,17 @@ class RetouchRequestSetStatusSerializer(serializers.Serializer):
     def create(self, validated_data):
         rr = validated_data["retouch_request"]
         new_status = validated_data["new_status"]
-        
+
+        # Меняем статус
         rr.status = new_status
-        rr.save(update_fields=["status"])
+        
+        # Если статус == 3, ставим текущее время в retouch_date
+        if new_status.id == 3:
+            rr.retouch_date = timezone.now()
+            rr.save(update_fields=["status", "retouch_date"])
+        else:
+            rr.save(update_fields=["status"])
+
         return rr
 
 class ReadyPhotosSerializer(serializers.ModelSerializer):
@@ -706,3 +719,77 @@ class ReadyPhotosSerializer(serializers.ModelSerializer):
             'retouch_date',
             'retouch_link',
         ]
+
+class StockmanIncomeSerializer(serializers.Serializer):
+    """
+    Сериалайзер для приемки товара (приход).
+    Принимает список штрихкодов.
+    """
+    barcodes = serializers.ListField(
+        child=serializers.CharField(max_length=13),
+        allow_empty=False
+    )
+
+
+class StockmanOutcomeSerializer(serializers.Serializer):
+    """
+    Сериалайзер для отправки товара (расход).
+    Принимает список штрихкодов.
+    """
+    barcodes = serializers.ListField(
+        child=serializers.CharField(max_length=13),
+        allow_empty=False
+    )
+
+
+class StockmanDefectSerializer(serializers.Serializer):
+    """
+    Сериалайзер для пометки товара как брак.
+    Принимает один штрихкод и комментарий.
+    """
+    barcode = serializers.CharField(max_length=13)
+    comment = serializers.CharField(allow_blank=True, allow_null=True)
+
+
+class StockmanOpenedSerializer(serializers.Serializer):
+    """
+    Сериалайзер для пометки товара как вскрыто.
+    Принимает один штрихкод.
+    """
+    barcode = serializers.CharField(max_length=13)
+
+class STRequestCreateSerializer(serializers.ModelSerializer):
+    """
+    Сериалайзер для создания заявки STRequest.
+    RequestNumber, creation_date, status и stockman
+    не передаются от клиента (устанавливаются автоматически).
+    """
+    class Meta:
+        model = STRequest
+        fields = [
+            'photographer',
+            'retoucher',
+            # 'stockman',        # Исключаем из входных данных
+            # 'creation_date',   # Исключаем
+            # 'status',          # Исключаем
+            's_ph_comment',
+            'sr_comment',
+            'photos_link',
+            'photo_date',
+            'retouch_date',
+        ]
+        extra_kwargs = {
+            'photographer': {'required': False, 'allow_null': True},
+            'retoucher': {'required': False, 'allow_null': True},
+            's_ph_comment': {'required': False, 'allow_null': True},
+            'sr_comment': {'required': False, 'allow_null': True},
+            'photos_link': {'required': False, 'allow_null': True},
+            'photo_date': {'required': False, 'allow_null': True},
+            'retouch_date': {'required': False, 'allow_null': True},
+        }
+
+class NofotoCreateSerializer(serializers.Serializer):
+    """
+    Сериалайзер для принятия штрихкода и создания записи Nofoto.
+    """
+    barcode = serializers.CharField(max_length=13)

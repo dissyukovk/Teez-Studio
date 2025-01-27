@@ -1,13 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import STRequest, Product, Invoice, ProductMoveStatus, ProductCategory, Product, Order, OrderProduct, OrderStatus, STRequestProduct, ProductOperation, ProductOperationTypes, InvoiceProduct, RetouchStatus, STRequestStatus, UserURLs, STRequestHistory, STRequestHistoryOperations, Blocked_Shops
+from .models import STRequest, Product, Invoice, ProductMoveStatus, ProductCategory, Product, Order, OrderProduct, OrderStatus, STRequestProduct, ProductOperation, ProductOperationTypes, InvoiceProduct, RetouchStatus, STRequestStatus, UserURLs, STRequestHistory, STRequestHistoryOperations, Blocked_Shops, Nofoto
 from .forms import STRequestForm
 from django.contrib.auth.decorators import login_required
-from rest_framework import viewsets, status, serializers, generics, permissions
+from rest_framework import viewsets, status, serializers, generics, permissions, filters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import NotFound
@@ -15,7 +15,8 @@ from django.contrib.auth.models import User, Group
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer, UserURLsSerializer, STRequestHistorySerializer
+from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer, UserURLsSerializer, STRequestHistorySerializer, NofotoListSerializer
+from .pagination import NofotoPagination
 from django.db import transaction, IntegrityError
 from django.db.models import Count, Max, F, Value, Q, Sum, OuterRef, Subquery
 from django.db.models.functions import Concat
@@ -23,6 +24,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 import logging
 from django_filters import rest_framework as filters
+from django_filters.rest_framework import DjangoFilterBackend
 from datetime import datetime
 
 
@@ -2112,3 +2114,58 @@ def accepted_products_by_category(request):
     data = list(qs)  # [{'category_id': 1, 'count': 42}, {'category_id': 2, 'count': 17}, ...]
 
     return JsonResponse(data, safe=False)
+
+class NofotoListView(ListAPIView):
+    """
+    Эндпоинт (GET) без аутентификации:
+    - Возвращает список записей Nofoto с полями Barcode, Name, Shop_id, Дата
+    - Фильтрация по любым полям (barcode, product__name, product__seller, date и т.д.)
+    - Фильтрация по дате (start_date, end_date)
+    - Сортировка (параметр ?ordering=...)
+    - Пагинация (page_size=100 по умолчанию, max=100000)
+    """
+    permission_classes = [AllowAny]
+    serializer_class = NofotoListSerializer
+    pagination_class = NofotoPagination
+
+    queryset = Nofoto.objects.all()
+
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    ]
+    # Здесь указываем поля, по которым хотим уметь фильтровать напрямую (exact match)
+    filterset_fields = [
+        'product__barcode',
+        'product__name',
+        'product__seller',
+        'date',
+    ]
+    # Указываем поля, по которым можно искать (для SearchFilter),
+    # например, по имени товара или штрихкоду:
+    search_fields = [
+        'product__barcode',
+        'product__name',
+    ]
+    # Указываем поля, по которым можно сортировать (для OrderingFilter).
+    # При желании можно добавить 'product__barcode', 'product__seller', 'date', 'product__name'
+    ordering_fields = [
+        'date',
+        'product__barcode',
+        'product__seller',
+        'product__name',
+    ]
+    # По умолчанию можно задать
+    ordering = ['-date']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Можем отфильтровать по дате (start_date, end_date).
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            qs = qs.filter(date__gte=start_date)
+        if end_date:
+            qs = qs.filter(date__lte=end_date)
+        return qs

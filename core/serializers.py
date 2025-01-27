@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.db.models import Count
-from .models import Product, STRequestProduct, STRequest, Invoice, InvoiceProduct, ProductMoveStatus, ProductOperation, Order, OrderStatus, OrderProduct, ProductCategory, RetouchStatus, STRequestStatus, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations
+from .models import Product, STRequestProduct, STRequest, Invoice, InvoiceProduct, ProductMoveStatus, ProductOperation, Order, OrderStatus, OrderProduct, ProductCategory, RetouchStatus, STRequestStatus, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, Nofoto
 
 class UserSerializer(serializers.ModelSerializer):
     groups = serializers.SerializerMethodField()
@@ -225,3 +225,23 @@ class STRequestHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = STRequestHistory
         fields = '__all__'
+
+class NofotoListSerializer(serializers.ModelSerializer):
+    """
+    Сериалайзер для вывода данных из таблицы Nofoto
+    в формате:
+    {
+      "Barcode": ...,  # из Product.barcode
+      "Name": ...,     # из Product.name
+      "Shop_id": ...,  # из Product.seller
+      "Дата": ...      # из Nofoto.date
+    }
+    """
+    Barcode = serializers.CharField(source='product.barcode')
+    Name = serializers.CharField(source='product.name')
+    Shop_id = serializers.IntegerField(source='product.seller', allow_null=True)
+    Дата = serializers.DateTimeField(source='date')
+
+    class Meta:
+        model = Nofoto
+        fields = ('Barcode', 'Name', 'Shop_id', 'Дата')
