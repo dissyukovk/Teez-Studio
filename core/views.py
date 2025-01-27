@@ -19,6 +19,7 @@ from .serializers import UserSerializer, ProductSerializer, STRequestSerializer,
 from django.db import transaction, IntegrityError
 from django.db.models import Count, Max, F, Value, Q, Sum, OuterRef, Subquery
 from django.db.models.functions import Concat
+from django.http import JsonResponse
 from django.utils import timezone
 import logging
 from django_filters import rest_framework as filters
@@ -2089,3 +2090,25 @@ class STRequestHistoryViewSet(ModelViewSet):
     ]
     ordering_fields = ['date', 'st_request__RequestNumber', 'product__barcode', 'user__username', 'operation__name']
     ordering = ['-date']  # Сортировка по умолчанию
+
+def accepted_products_by_category(request):
+    """
+    Эндпоинт, возвращающий список вида:
+    [
+      {"category_id": <int>, "count": <int>},
+      ...
+    ]
+    где category_id — это id категории, а count — количество товаров с непустой income_date.
+    Сортировка идёт по убыванию count.
+    """
+    qs = (
+        Product.objects
+        .filter(income_date__isnull=False)
+        .values('category_id')
+        .annotate(count=Count('id'))
+        .order_by('-count')  # Сортировка по убыванию
+    )
+
+    data = list(qs)  # [{'category_id': 1, 'count': 42}, {'category_id': 2, 'count': 17}, ...]
+
+    return JsonResponse(data, safe=False)

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Category Counts</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      margin: 20px 0;
+      width: 300px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: center;
+    }
+    th {
+      background-color: #f3f3f3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Количество принятых товаров по категориям</h1>
+  
+  <table id="category-table">
+    <thead>
+      <tr>
+        <th>Категория (ID)</th>
+        <th>Количество</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Табличные данные будут заполнены динамически -->
+    </tbody>
+  </table>
+
+  <script>
+    // При загрузке страницы делаем запрос к API
+    fetch('http://192.168.6.15:8000/api/category-counts/')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Сетевая ошибка: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(data => {
+        const tableBody = document.querySelector('#category-table tbody');
+        
+        data.forEach(item => {
+          const row = document.createElement('tr');
+          
+          // Ячейка для ID категории
+          const categoryIdCell = document.createElement('td');
+          categoryIdCell.textContent = item.category_id;
+          row.appendChild(categoryIdCell);
+          
+          // Ячейка для количества
+          const countCell = document.createElement('td');
+          countCell.textContent = item.count;
+          row.appendChild(countCell);
+          
+          tableBody.appendChild(row);
+        });
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке данных:', error);
+      });
+  </script>
+</body>
+</html>
