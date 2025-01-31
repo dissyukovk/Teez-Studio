@@ -1219,3 +1219,241 @@ def nofoto_create(request):
                         status=status.HTTP_200_OK)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  # Если нужна авторизация, можно поменять/убрать
+def sp_get_assistants(request):
+    """
+    Возвращает список пользователей, состоящих в группе "Ассистент".
+    Формат ответа:
+    [
+      {
+        "id": <int>,
+        "first_name": <str>,
+        "last_name": <str>
+      },
+      ...
+    ]
+    """
+    try:
+        assistants_group = Group.objects.get(name="Ассистент")
+    except Group.DoesNotExist:
+        return Response({"detail": "Группа 'Ассистент' не найдена."},
+                        status=status.HTTP_404_NOT_FOUND)
+    
+    users = assistants_group.user_set.all()
+    data = [
+        {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name
+        }
+        for user in users
+    ]
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def sp_assign_assistant(request):
+    """
+    Назначение пользователя (id) в качестве assistant по номеру заявки (RequestNumber).
+    В теле запроса ожидаются поля: {"strequest": "<RequestNumber>", "user": <id>}
+    
+    При назначении устанавливается текущее время (assistant_date).
+    """
+    request_number = request.data.get('strequest')
+    user_id = request.data.get('user')
+
+    if not request_number or not user_id:
+        return Response(
+            {"detail": "Поля 'strequest' и 'user' обязательны."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        strequest = STRequest.objects.get(RequestNumber=request_number)
+    except STRequest.DoesNotExist:
+        return Response(
+            {"detail": f"Заявка с номером '{request_number}' не найдена."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"detail": f"Пользователь с id '{user_id}' не найден."},
+                        status=status.HTTP_404_NOT_FOUND)
+
+    strequest.assistant = user
+    strequest.assistant_date = timezone.now()  # Установка текущего времени
+    strequest.save()
+
+    return Response(
+        {"detail": f"Пользователь (id={user_id}) назначен ассистентом."},
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def sp_clear_assistant(request):
+    """
+    Очистка полей 'assistant' и 'assistant_date'.
+    В теле запроса ожидается поле: {"strequest": "<RequestNumber>"}
+    """
+    request_number = request.data.get('strequest')
+
+    if not request_number:
+        return Response(
+            {"detail": "Поле 'strequest' обязательно."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        strequest = STRequest.objects.get(RequestNumber=request_number)
+    except STRequest.DoesNotExist:
+        return Response(
+            {"detail": f"Заявка с номером '{request_number}' не найдена."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    strequest.assistant = None
+    strequest.assistant_date = None
+    strequest.save()
+
+    return Response(
+        {"detail": "Поле 'assistant' и 'assistant_date' очищены."},
+        status=status.HTTP_200_OK
+    )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  # Если нужна авторизация
+def sp_daily_stats(request):
+    """
+    Эндпоинт для получения статистики по фотографам и ассистентам за указанную дату.
+    
+    Параметры:
+      ?date=dd.mm.yyyy
+
+    Возвращает:
+      {
+        "photographers": [
+          "Имя Фамилия - число",
+          ...
+        ],
+        "assistants": [
+          "Имя Фамилия - число",
+          ...
+        ]
+      }
+    """
+    date_str = request.GET.get('date')
+    if not date_str:
+        return Response(
+            {"detail": "Параметр 'date' (dd.mm.yyyy) обязателен."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Пытаемся распарсить дату из формата dd.mm.yyyy
+    try:
+        day, month, year = map(int, date_str.split('.'))
+        stats_date = datetime(year, month, day)
+    except (ValueError, TypeError):
+        return Response(
+            {"detail": "Некорректный формат даты. Ожидается dd.mm.yyyy"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # ----------------------------------------------------------------------------
+    # 1. ФОТОГРАФЫ
+    # ----------------------------------------------------------------------------
+    # Фильтруем заявки, у которых date (только год, месяц, день) совпадает с photo_date
+    # И у которых есть фотограф photographer.
+    # Для каждой такой заявки суммируем товары с photo_status ∈ [1,2,25] и sphoto_status=1.
+    # Затем группируем по фотографу.
+
+    photographers_data = {}
+    # Список нужных заявок
+    photographer_requests = STRequest.objects.filter(
+        photo_date__year=stats_date.year,
+        photo_date__month=stats_date.month,
+        photo_date__day=stats_date.day
+    ).exclude(photographer=None)
+
+    # Подтягиваем связанные продукты одним запросом
+    # (select_related/ prefetch_related по необходимости)
+    for streq in photographer_requests.prefetch_related('strequestproduct_set', 'photographer'):
+        if not streq.photographer:
+            continue
+        ph = streq.photographer
+        # Подсчёт количества товаров в этой заявке
+        # photo_status ∈ [1,2,25], sphoto_status=1
+        count_products = STRequestProduct.objects.filter(
+            request=streq,
+            photo_status__id__in=[1, 2, 25],
+            sphoto_status__id=1
+        ).count()
+
+        # накапливаем в dict
+        if ph.id not in photographers_data:
+            photographers_data[ph.id] = {
+                "user": ph,
+                "count": 0
+            }
+        photographers_data[ph.id]["count"] += count_products
+
+    # Формируем итоговый список
+    photographers_result = []
+    for ph_id, val in photographers_data.items():
+        user = val["user"]
+        total = val["count"]
+        first_name = user.first_name or ""
+        last_name = user.last_name or ""
+        photographers_result.append(f"{first_name} {last_name} - {total}")
+
+    # ----------------------------------------------------------------------------
+    # 2. АССИСТЕНТЫ
+    # ----------------------------------------------------------------------------
+    # Смотрим заявки, у которых assistant_date (год/месяц/день) = stats_date
+    # и есть ассистент. По каждой заявке считаем ВСЕ товары (STRequestProduct.count)
+    # Группируем по ассистенту, суммируем.
+
+    assistants_data = {}
+    assistant_requests = STRequest.objects.filter(
+        assistant_date__year=stats_date.year,
+        assistant_date__month=stats_date.month,
+        assistant_date__day=stats_date.day
+    ).exclude(assistant=None)
+
+    for streq in assistant_requests.prefetch_related('strequestproduct_set', 'assistant'):
+        if not streq.assistant:
+            continue
+        asst = streq.assistant
+        # Подсчёт всех товаров в заявке
+        count_products = STRequestProduct.objects.filter(request=streq).count()
+
+        if asst.id not in assistants_data:
+            assistants_data[asst.id] = {
+                "user": asst,
+                "count": 0
+            }
+        assistants_data[asst.id]["count"] += count_products
+
+    # Формируем итоговый список
+    assistants_result = []
+    for asst_id, val in assistants_data.items():
+        user = val["user"]
+        total = val["count"]
+        first_name = user.first_name or ""
+        last_name = user.last_name or ""
+        assistants_result.append(f"{first_name} {last_name} - {total}")
+
+    # ----------------------------------------------------------------------------
+    # Итоговый ответ
+    # ----------------------------------------------------------------------------
+    response_data = {
+        "photographers": photographers_result,
+        "assistants": assistants_result
+    }
+    return Response(response_data, status=status.HTTP_200_OK)

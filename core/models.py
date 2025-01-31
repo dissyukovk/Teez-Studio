@@ -32,6 +32,8 @@ class STRequest(models.Model):
     photos_link = models.TextField(blank=True, null=True)
     photo_date = models.DateTimeField(blank=True, null=True)
     retouch_date = models.DateTimeField(blank=True, null=True)
+    assistant = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
+    assistant_date = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         return self.RequestNumber
@@ -302,3 +304,10 @@ class Nofoto(models.Model):
 
     def __str__(self):
         return f"Nofoto: {self.product.barcode} - {self.user.username}"
+
+class Blocked_Barcode(models.Model):
+    id = models.IntegerField(primary_key=True)
+    barcode = models.CharField(max_length=13, unique=True)
+
+    def __str__(self):
+        return str(self.shop_id)

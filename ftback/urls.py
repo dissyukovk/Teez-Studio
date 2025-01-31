@@ -50,4 +50,8 @@ urlpatterns = [
     path('stockman_opened/', views.stockman_opened, name='stockman_opened'),
     path('stockman_create_strequest/', views.strequest_create, name='create_strequest'),
     path('nofoto/', views.nofoto_create, name='nofoto_create'),
+    path('sp/assistants/', views.sp_get_assistants, name='get_assistants'),
+    path('sp/assign-assistant/', views.sp_assign_assistant, name='assign_assistant'),
+    path('sp/clear-assistant/', views.sp_clear_assistant, name='clear_assistant'),
+    path('sp/daily_stats/', views.sp_daily_stats, name='daily_stats'),
 ]

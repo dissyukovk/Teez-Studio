@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
-from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct, SPhotoStatus, STRequestPhotoTime, Blocked_Shops, Nofoto
+from .models import STRequest, STRequestProduct, Product, ProductCategory, ProductMoveStatus, RetouchStatus, Order, OrderProduct, OrderStatus, Invoice, InvoiceProduct, STRequestStatus, ProductOperation, ProductOperationTypes, UserURLs, STRequestHistory, STRequestHistoryOperations, PhotoStatus, Camera, UserProfile, RetouchRequestStatus, RetouchRequest, ShootingToRetouchLink, RetouchRequestProduct, SPhotoStatus, STRequestPhotoTime, Blocked_Shops, Nofoto, Blocked_Barcode
 
 
 
@@ -26,7 +26,7 @@ class STRequestAdmin(admin.ModelAdmin):
 @admin.register(STRequestProduct)
 class STRequestProductAdmin(admin.ModelAdmin):
     list_display = ['request', 'product', 'retouch_status', 'photo_status', 'photos_link', 'sphoto_status', 'comment']
-    search_fields = ['request__RequestNumber', 'product__name', 'photo_status__name']  # Используем __name для ForeignKey
+    search_fields = ['request__RequestNumber', 'product__name', 'product__barcode', 'photo_status__name']  # Используем __name для ForeignKey
     list_filter = ['retouch_status']
     ordering = ['request']
 
@@ -248,6 +248,7 @@ class STRequestPhotoTimeAdmin(admin.ModelAdmin):
 @admin.register(Blocked_Shops)
 class BlockedShopsAdmin(admin.ModelAdmin):
     list_display = ('id', 'shop_id')
+    search_fields = ('id', 'shop_id')
 
 @admin.register(Nofoto)
 class NofotoAdmin(admin.ModelAdmin):
@@ -256,3 +257,8 @@ class NofotoAdmin(admin.ModelAdmin):
     search_fields = ('product__barcode', 'product__name', 'user__username')
     date_hierarchy = 'date'
     ordering = ('-date',)
+
+@admin.register(Blocked_Barcode)
+class BlockedBarcodeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'barcode')
+    search_fields = ('id', 'barcode')

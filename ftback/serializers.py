@@ -238,10 +238,11 @@ class SPhotographerRequestDetailSerializer(serializers.ModelSerializer):
     status_name = serializers.CharField(source='status.name', read_only=True)
     stockman_name = serializers.SerializerMethodField()
     photographer_name = serializers.SerializerMethodField()
+    assistant_name = serializers.SerializerMethodField()  # <-- Добавлено
     total_products = serializers.SerializerMethodField()
     taken_count = serializers.SerializerMethodField()
     unchecked_count = serializers.SerializerMethodField()
-    priority_count = serializers.SerializerMethodField()  # Новый метод
+    priority_count = serializers.SerializerMethodField()
     products = SPhotographerRequestProductDetailSerializer(source='strequestproduct_set', many=True)
 
     class Meta:
@@ -251,10 +252,11 @@ class SPhotographerRequestDetailSerializer(serializers.ModelSerializer):
             'status_name',
             'stockman_name',
             'photographer_name',
+            'assistant_name',       # <-- Добавляем новое поле в список полей
             'total_products',
             'taken_count',
             'unchecked_count',
-            'priority_count',  # Добавляем в поля
+            'priority_count',
             'creation_date',
             'photo_date',
             'products'
@@ -270,14 +272,25 @@ class SPhotographerRequestDetailSerializer(serializers.ModelSerializer):
             return f"{obj.photographer.first_name} {obj.photographer.last_name}"
         return ""
 
+    def get_assistant_name(self, obj):
+        """
+        Аналогично photographer_name, формирует ФИО ассистента
+        """
+        if obj.assistant:
+            return f"{obj.assistant.first_name} {obj.assistant.last_name}"
+        return ""
+
     def get_total_products(self, obj):
         return obj.strequestproduct_set.count()
 
     def get_taken_count(self, obj):
-        return obj.strequestproduct_set.filter(photo_status_id__in=[1,2,25]).count()
+        return obj.strequestproduct_set.filter(photo_status_id__in=[1, 2, 25]).count()
 
     def get_unchecked_count(self, obj):
-        return obj.strequestproduct_set.filter(photo_status_id__in=[1,2,25]).exclude(sphoto_status_id=1).count()
+        return (obj.strequestproduct_set
+                .filter(photo_status_id__in=[1, 2, 25])
+                .exclude(sphoto_status_id=1)
+                .count())
 
     def get_priority_count(self, obj):
         return obj.strequestproduct_set.filter(product__priority=True).count()
