@@ -5,7 +5,7 @@ from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 from django.db.models import Sum, F  # Импорт Sum
 from django.contrib.auth.models import User, Group
-from core.models import ProductOperation, STRequest, STRequestProduct, STRequestHistory  # Импорт моделей
+from core.models import ProductOperation, STRequest, STRequestProduct, STRequestHistory, RetouchRequest, RetouchRequestProduct
 import logging
 logger = logging.getLogger(__name__)
 
@@ -30,22 +30,36 @@ def export_daily_stats():
         def get_stats_for_date(date):
             """Получение статистики за указанную дату"""
             accepted = ProductOperation.objects.filter(
-                operation_type=3, date__date=date).count()
+                operation_type=3, date__date=date
+            ).count()
             shipped = ProductOperation.objects.filter(
-                operation_type=4, date__date=date).count()
+                operation_type=4, date__date=date
+            ).count()
             defective = ProductOperation.objects.filter(
-                operation_type=25, date__date=date).count()
+                operation_type=25, date__date=date
+            ).count()
             accepted_without_request = ProductOperation.objects.filter(
                 operation_type=3, date__date=date
             ).exclude(product__strequestproduct__isnull=False).count()
+            
+            # Новый расчет photo_count:
+            # Берем заявки STRequest с photo_date равной указанной дате, затем считаем связанные записи STRequestProduct,
+            # у которых photo_status в [1, 2, 25] и sphoto_status равен 1.
             photo_count = STRequestProduct.objects.filter(
-                request__status_id__in=[5, 6, 7, 8, 9],
-                request__photo_date__date=date
+                request__photo_date__date=date,
+                photo_status__id__in=[1, 2, 25],
+                sphoto_status__id=1
             ).count()
-            retouch_count = STRequestProduct.objects.filter(
-                request__status_id__in=[8, 9],
-                request__retouch_date__date=date
+            
+            # Новый расчет retouch_count:
+            # Берем заявки RetouchRequest с retouch_date равной указанной дате, затем считаем связанные записи RetouchRequestProduct,
+            # где retouch_status равен 2 и sretouch_status равен 1.
+            retouch_count = RetouchRequestProduct.objects.filter(
+                retouch_request__retouch_date__date=date,
+                retouch_status__id=2,
+                sretouch_status__id=1
             ).count()
+            
             return [
                 date.strftime('%d.%m.%Y'),
                 accepted,
@@ -62,8 +76,7 @@ def export_daily_stats():
         # Авторизация в Google Sheets
         creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
         service = build('sheets', 'v4', credentials=creds)
-
-        logger.debug(f"Авторизация в Google API успешна")
+        logger.debug("Авторизация в Google API успешна")
 
         # Получаем существующие данные из таблицы
         sheet_data = service.spreadsheets().values().get(

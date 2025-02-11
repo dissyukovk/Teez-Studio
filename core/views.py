@@ -1399,8 +1399,25 @@ def create_order(request):
         if str(priority_flag).lower() == 'true':
             Product.objects.filter(pk__in=[p.pk for p in valid_products]).update(priority=True)
 
-        # Создаём записи в OrderProduct для каждого валидного товара
+        # Для каждого валидного продукта:
+        # 1) Обновляем поле move_status на значение 2.
+        # 2) Создаём запись в модели ProductOperation с operation_type = 2.
+        # 3) Создаём запись в OrderProduct для связывания товара с заказом.
         for product in valid_products:
+            # Обновляем move_status на 2 (предполагается, что статус с pk=2 существует)
+            product.move_status_id = 2
+            product.save()
+
+            # Создаём запись в ProductOperation
+            ProductOperation.objects.create(
+                product=product,
+                operation_type_id=2,  # operation_type = 2
+                user=request.user,
+                comment=''  # Комментарий оставляем пустым
+                # date заполняется автоматически благодаря auto_now_add
+            )
+
+            # Создаём запись в OrderProduct для данного товара
             OrderProduct.objects.create(order=order, product=product)
 
         serializer = OrderSerializer(order)

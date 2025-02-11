@@ -186,6 +186,8 @@ class ProductOperation(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     date = models.DateTimeField(auto_now_add=True)
     comment = models.TextField(blank=True, null=True)  # New comment field
+    photographer_comment = models.TextField(blank=True, null=True)
+    photos_link = models.TextField(blank=True, null=True)
     
     def __str__(self):
         return f"{self.product.barcode} - {self.operation_type.name}"
@@ -310,4 +312,4 @@ class Blocked_Barcode(models.Model):
     barcode = models.CharField(max_length=13, unique=True)
 
     def __str__(self):
-        return str(self.shop_id)
+        return str(self.barcode)

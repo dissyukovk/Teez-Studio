@@ -306,10 +306,15 @@ class CreateSTRequestPhotoTimeView(APIView):
             photo_date=timezone.now()
         )
 
-        return Response({
+        # Формируем ответ. Если поле info не пустое, добавляем его в тело ответа.
+        response_data = {
             'message': 'Photo time created successfully',
-            'id': st_request_photo_time.id
-        }, status=201)
+            'id': st_request_photo_time.id,
+        }
+        if product.info:
+            response_data['info'] = product.info
+
+        return Response(response_data, status=201)
 
 class GetPhotoTimesByRequestNumberView(APIView):
     permission_classes = [IsAuthenticated]

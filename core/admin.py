@@ -220,9 +220,7 @@ class STRequestPhotoTimeAdmin(admin.ModelAdmin):
         "user__username",
         "user__email"
     )
-    list_filter = (
-        "st_request_product__request", 
-        "st_request_product__product", 
+    list_filter = ( 
         "user",
         "photo_date"
     )
