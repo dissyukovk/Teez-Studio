@@ -70,7 +70,8 @@ from .views import (
     UserURLsViewSet,
     STRequestHistoryViewSet,
     accepted_products_by_category,
-    NofotoListView
+    NofotoListView,
+    update_product_info
 )
 
 class UserDetailView(APIView):
@@ -123,6 +124,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('api/category-counts/', accepted_products_by_category, name='category-counts'),
     path('nofoto_list/', NofotoListView.as_view(), name='nofoto_list'),
+    path('products/update-info/', update_product_info, name='update_product_info'),
 
     # Основные API
     path('api/products/', product_list, name='product-list'),

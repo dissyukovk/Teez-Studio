@@ -1,1 +1,1 @@
-uvicorn myproject.asgi:application --host 192.168.1.174 --port 8000 --timeout-keep-alive 900
+uvicorn myproject.asgi:application --host 192.168.7.230 --port 8000 --timeout-keep-alive 900

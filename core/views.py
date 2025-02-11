@@ -2168,3 +2168,20 @@ class NofotoListView(ListAPIView):
             qs = qs.filter(product__barcode__in=splitted)
 
         return qs
+
+@api_view(['POST'])
+def update_product_info(request):
+    # Получаем данные из запроса
+    barcodes = request.data.get('barcodes')
+    info = request.data.get('info')
+
+    # Проверяем корректность входных данных
+    if not barcodes or not isinstance(barcodes, list):
+        return Response({"error": "Поле 'barcodes' должно быть непустым списком."}, status=status.HTTP_400_BAD_REQUEST)
+    if info is None:
+        return Response({"error": "Поле 'info' обязательно для заполнения."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Обновляем все продукты, соответствующие заданным штрихкодам
+    updated_count = Product.objects.filter(barcode__in=barcodes).update(info=info)
+
+    return Response({"message": f"Информация обновлена для {updated_count} товаров."}, status=status.HTTP_200_OK)
