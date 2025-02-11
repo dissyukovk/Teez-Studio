@@ -900,12 +900,13 @@ class SRStatisticView(APIView):
             return Response({"error": "Invalid date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Фильтруем RetouchRequestProduct:
-        # retouch_status=2 (Готов), sretouch_status=1 (Проверено).
-        # RetouchRequest.retouch_date__date = date_obj
+        # retouch_status=2 (Готов), sretouch_status=1 (Проверено),
+        # retouch_request.retouch_date__date = date_obj и retouch_request.status_id=5.
         qs = RetouchRequestProduct.objects.filter(
             retouch_status_id=2,
             sretouch_status_id=1,
-            retouch_request__retouch_date__date=date_obj
+            retouch_request__retouch_date__date=date_obj,
+            retouch_request__status_id=5  # добавлено условие по статусу = 5
         ).select_related("retouch_request__retoucher")
 
         # Исключаем случаи без ретушёра, если это необходимо
