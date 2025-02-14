@@ -19,23 +19,23 @@ class STRequestAdmin(admin.ModelAdmin):
         'creation_date', 'status', 'photo_date', 'retouch_date'
     ]
     search_fields = ['RequestNumber', 'status__name']
-    list_filter = ['status', 'creation_date']
+    list_filter = ['status', 'creation_date', 'photo_date']
     ordering = ['creation_date']
 
 # Admin for STRequestProduct
 @admin.register(STRequestProduct)
 class STRequestProductAdmin(admin.ModelAdmin):
-    list_display = ['request', 'product', 'retouch_status', 'photo_status', 'photos_link', 'sphoto_status', 'comment']
-    search_fields = ['request__RequestNumber', 'product__name', 'product__barcode', 'photo_status__name']  # Используем __name для ForeignKey
-    list_filter = ['retouch_status']
+    list_display = ['request', 'product', 'photo_status', 'photos_link', 'sphoto_status', 'comment']
+    search_fields = ['request__RequestNumber', 'product__barcode'] 
+    list_filter = ['photo_status', 'sphoto_status', 'request__status']
     ordering = ['request']
 
 # Admin for Product
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['barcode', 'name', 'category', 'in_stock_sum', 'seller', 'move_status', 'income_date', 'outcome_date', 'info']
-    search_fields = ['barcode', 'name']
-    list_filter = ['category', 'move_status']
+    list_display = ['barcode', 'name', 'category', 'seller', 'move_status', 'income_date', 'outcome_date', 'info']
+    search_fields = ['barcode']
+    list_filter = ['move_status']
     ordering = ['name']
 
 # Admin for ProductCategory
@@ -43,51 +43,52 @@ class ProductAdmin(admin.ModelAdmin):
 class ProductCategoryAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
     search_fields = ['name']
-    ordering = ['name']
+    ordering = ['id']
 
 # Admin for ProductMoveStatus
 @admin.register(ProductMoveStatus)
 class ProductMoveStatusAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
     search_fields = ['name']
-    ordering = ['name']
+    ordering = ['id']
 
 # Admin for RetouchStatus
 @admin.register(RetouchStatus)
 class RetouchStatusAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
     search_fields = ['name']
-    ordering = ['name']
+    ordering = ['id']
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ['OrderNumber', 'date', 'creator', 'status']
-    search_fields = ['OrderNumber', 'creator__username']
-    ordering = ['OrderNumber']
+    search_fields = ['OrderNumber']
+    list_filter = ['status']
+    ordering = ['-OrderNumber']
 
 @admin.register(OrderStatus)
 class OrderStatusAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
-    search_fields = ['name']
+    search_fields = ['id']
 
 @admin.register(OrderProduct)
 class OrderProductAdmin(admin.ModelAdmin):
     list_display = ['order', 'product', 'assembled', 'assembled_date', 'accepted', 'accepted_date']
-    search_fields = ['order__OrderNumber', 'product__name']
+    search_fields = ['order__OrderNumber', 'product__barcode']
     ordering = ['order']
 
 # Admin for Invoice
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = ['InvoiceNumber', 'date', 'creator']
-    search_fields = ['InvoiceNumber', 'creator__username']
+    search_fields = ['InvoiceNumber']
     ordering = ['date']
 
 # Admin for InvoiceProduct
 @admin.register(InvoiceProduct)
 class InvoiceProductAdmin(admin.ModelAdmin):
     list_display = ['invoice', 'product']
-    search_fields = ['invoice__InvoiceNumber', 'product__name']
+    search_fields = ['invoice__InvoiceNumber', 'product__barcode']
     ordering = ['invoice']
 
 # Admin для ProductOperation
@@ -122,14 +123,14 @@ class STRequestHistoryAdmin(admin.ModelAdmin):
 class PhotoStatusAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
     search_fields = ('name',)
-    ordering = ('name',)
+    ordering = ('id',)
 
 # Admin for PhotoStatus
 @admin.register(SPhotoStatus)
 class SPhotoStatusAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
     search_fields = ('name',)
-    ordering = ('name',)
+    ordering = ('id',)
 
 # Admin for Camera
 @admin.register(Camera)
@@ -165,7 +166,7 @@ class CustomUserAdmin(UserAdmin):
 @admin.register(RetouchRequestStatus)
 class RetouchRequestStatusAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')  # Отображаемые поля в списке
-    search_fields = ('name',)      # Поиск по имени
+    search_fields = ('id',)      # Поиск по имени
 
 
 # Регистрация модели RetouchRequest
@@ -217,12 +218,11 @@ class STRequestPhotoTimeAdmin(admin.ModelAdmin):
     search_fields = (
         "st_request_product__request__RequestNumber", 
         "st_request_product__product__barcode",
-        "user__username",
-        "user__email"
     )
     list_filter = ( 
         "user",
-        "photo_date"
+        "photo_date",
+        "user__username"
     )
     date_hierarchy = "photo_date"
     ordering = ("photo_date",)
@@ -252,7 +252,7 @@ class BlockedShopsAdmin(admin.ModelAdmin):
 class NofotoAdmin(admin.ModelAdmin):
     list_display = ('product', 'date', 'user')
     list_filter = ('date',)
-    search_fields = ('product__barcode', 'product__name', 'user__username')
+    search_fields = ('product__barcode', 'product__seller')
     date_hierarchy = 'date'
     ordering = ('-date',)
 

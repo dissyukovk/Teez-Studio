@@ -1340,7 +1340,7 @@ def check_barcodes(request):
 @permission_classes([IsAuthenticated])
 def create_order(request):
     try:
-        # Собираем список всех shop_id из Blocked_Shops (как прежде)
+        # Собираем список всех shop_id из Blocked_Shops
         blocked_shop_ids = Blocked_Shops.objects.values_list('shop_id', flat=True)
 
         # Собираем список всех заблокированных баркодов
@@ -1354,15 +1354,14 @@ def create_order(request):
         for barcode in barcodes:
             product = Product.objects.filter(barcode=barcode).first()
             if product:
-                # 1) Пропускаем, если seller есть в списке заблокированных магазинов
+                # Пропускаем товар, если seller есть в списке заблокированных магазинов
                 if product.seller is not None and product.seller in blocked_shop_ids:
                     continue
 
-                # 2) Пропускаем, если сам штрихкод есть в списке заблокированных
+                # Пропускаем товар, если сам штрихкод заблокирован
                 if barcode in blocked_barcodes:
                     continue
 
-                # Если ни по магазину, ни по баркоду нет блокировок — товар валиден
                 valid_products.append(product)
             else:
                 missing_barcodes.append(barcode)
@@ -1374,13 +1373,12 @@ def create_order(request):
                 'missing_barcodes': missing_barcodes
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Проверяем, нужно ли устанавливать приоритет
+        # Получаем флаг приоритета из запроса
         priority_flag = request.data.get('priority', False)
 
         # Генерация нового номера заказа
         last_order = Order.objects.aggregate(Max('OrderNumber'))
         new_order_number = int(last_order['OrderNumber__max'] or 0) + 1
-
         while Order.objects.filter(OrderNumber=new_order_number).exists():
             new_order_number += 1
 
@@ -1392,32 +1390,26 @@ def create_order(request):
             OrderNumber=new_order_number,
             date=current_date,
             creator_id=creator_id,
-            status_id=2  # К примеру, "Новый"
+            status_id=2  # Например, статус "Новый"
         )
 
-        # Если приоритет = True, проставляем для всех валидных продуктов
-        if str(priority_flag).lower() == 'true':
-            Product.objects.filter(pk__in=[p.pk for p in valid_products]).update(priority=True)
-
-        # Для каждого валидного продукта:
-        # 1) Обновляем поле move_status на значение 2.
-        # 2) Создаём запись в модели ProductOperation с operation_type = 2.
-        # 3) Создаём запись в OrderProduct для связывания товара с заказом.
+        # Для каждого валидного продукта обновляем статус и, если требуется, приоритет
         for product in valid_products:
-            # Обновляем move_status на 2 (предполагается, что статус с pk=2 существует)
+            if str(priority_flag).lower() == 'true':
+                product.priority = True
+            # Обновляем move_status на значение 2
             product.move_status_id = 2
             product.save()
 
             # Создаём запись в ProductOperation
             ProductOperation.objects.create(
                 product=product,
-                operation_type_id=2,  # operation_type = 2
+                operation_type_id=2,
                 user=request.user,
                 comment=''  # Комментарий оставляем пустым
-                # date заполняется автоматически благодаря auto_now_add
             )
 
-            # Создаём запись в OrderProduct для данного товара
+            # Создаём запись в OrderProduct для связывания товара с заказом
             OrderProduct.objects.create(order=order, product=product)
 
         serializer = OrderSerializer(order)

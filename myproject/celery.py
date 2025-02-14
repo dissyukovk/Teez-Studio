@@ -20,11 +20,11 @@ app.conf.timezone = 'Asia/Almaty'
 app.conf.beat_schedule = {
     'export-daily-stats': {
         'task': 'core.tasks.export_daily_stats',
-        'schedule': 600.0,  # Every 10 minutes
+        'schedule': 300.0,  # Every 5 minutes
     },
     'export-tvd-stats': {
         'task': 'core.tasks.export_tvd_stats',
-        'schedule': 1200.0,
+        'schedule': 1000.0,
     },
 }
 
