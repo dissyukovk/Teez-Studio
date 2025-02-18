@@ -308,7 +308,7 @@ class Nofoto(models.Model):
         return f"Nofoto: {self.product.barcode} - {self.user.username}"
 
 class Blocked_Barcode(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     barcode = models.CharField(max_length=13, unique=True)
 
     def __str__(self):

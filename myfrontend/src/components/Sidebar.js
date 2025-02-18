@@ -58,6 +58,9 @@ function Sidebar({ user }) {
             <li>
               <NavLink to="/categories" activeClassName="active">Категории</NavLink>
             </li>
+            <li>
+              <NavLink to="/addblockedbarcodes" activeClassName="active">Добавить блоки шк</NavLink>
+            </li>
           </>
         )}
 
@@ -159,6 +162,9 @@ function Sidebar({ user }) {
             </li>
             <li>
               <NavLink to="/fs_manager_requesthistory" activeClassName="active">История изменения заявок</NavLink>
+            </li>
+            <li>
+              <NavLink to="/updateinfo" activeClassName="active">Изменить ИНФО</NavLink>
             </li>
           </>
         )}

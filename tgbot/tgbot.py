@@ -145,7 +145,7 @@ def send_tvd_data(message):
 
 # Функция для запуска планировщика задач в отдельном потоке
 def scheduler_thread():
-    schedule.every().day.at("20:20").do(send_daily_stats)
+    schedule.every().day.at("20:30").do(send_daily_stats)
     while True:
         schedule.run_pending()
         time.sleep(1)

@@ -42,7 +42,9 @@ import FsManagerRequestHistory from './pages/fs_manager_requesthistory';
 import FS_Manager_Request_list from './pages/FS_Manager_Request_list';
 import FS_Manager_Request_detail from './pages/FS_Manager_Request_detail';
 import ReadyPhotosPage from './components/ReadyPhotos2';
-import NofotoPage from './components/NofotoPage'
+import NofotoPage from './components/NofotoPage';
+import UpdateProductInfo from './components/FS_Manager_InfoUpdate';
+import AddBlockedBarcodes from './components/FS_Manager_AddBlockedBarcodes';
 
 const AppContent = ({ isAuthenticated, user }) => {
   const location = useLocation();
@@ -53,7 +55,7 @@ const AppContent = ({ isAuthenticated, user }) => {
   }
 
   // Определяем маршруты, где не нужно отображать боковую панель
-  const noSidebarRoutes = ['/defect', '/ready-photos', '/ready-photos-2', '/current-products-fs', '/barcode-history', '/okz_orders', '/okz_orders/:orderNumber'];
+  const noSidebarRoutes = ['/defect', '/ready-photos', '/ready-photos-2', '/current-products-fs', '/barcode-history', '/okz_orders', '/okz_orders/:orderNumber', '/nofoto'];
 
   // Функция для проверки, нужен ли сайдбар на текущем пути
   const shouldShowSidebar = () => {
@@ -107,6 +109,8 @@ const AppContent = ({ isAuthenticated, user }) => {
         <Route path="/fs_manager_requesthistory" element={isAuthenticated ? <FsManagerRequestHistory /> : <Navigate to="/login" />} />
         <Route path="/fs_manager_request_list" element={<FS_Manager_Request_list />} />
         <Route path="/fs_manager_request_detail/:requestNumber" element={<FS_Manager_Request_detail />} />
+        <Route path="/updateinfo" element={<UpdateProductInfo />} />
+        <Route path="/addblockedbarcodes" element={<AddBlockedBarcodes />} />
       </Routes>
     </div>
   );  

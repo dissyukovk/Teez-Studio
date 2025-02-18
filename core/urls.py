@@ -71,7 +71,8 @@ from .views import (
     STRequestHistoryViewSet,
     accepted_products_by_category,
     NofotoListView,
-    update_product_info
+    update_product_info,
+    add_blocked_barcodes
 )
 
 class UserDetailView(APIView):
@@ -125,6 +126,7 @@ urlpatterns = [
     path('api/category-counts/', accepted_products_by_category, name='category-counts'),
     path('nofoto_list/', NofotoListView.as_view(), name='nofoto_list'),
     path('products/update-info/', update_product_info, name='update_product_info'),
+    path('blocked-barcodes/add/', add_blocked_barcodes, name='add_blocked_barcodes'),
 
     # Основные API
     path('api/products/', product_list, name='product-list'),

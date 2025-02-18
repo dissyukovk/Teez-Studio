@@ -2177,3 +2177,34 @@ def update_product_info(request):
     updated_count = Product.objects.filter(barcode__in=barcodes).update(info=info)
 
     return Response({"message": f"Информация обновлена для {updated_count} товаров."}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_blocked_barcodes(request):
+    barcodes_raw = request.data.get('barcodes')
+    if not barcodes_raw:
+        return Response({"error": "Поле 'barcodes' обязательно."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Если передан текст, разбиваем по строкам
+    if isinstance(barcodes_raw, str):
+        barcodes = [b.strip() for b in barcodes_raw.splitlines() if b.strip()]
+    elif isinstance(barcodes_raw, list):
+        barcodes = [str(b).strip() for b in barcodes_raw if str(b).strip()]
+    else:
+        return Response({"error": "Неверный формат данных."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not barcodes:
+        return Response({"error": "Нет валидных штрихкодов для добавления."}, status=status.HTTP_400_BAD_REQUEST)
+
+    created = 0
+    for barcode in barcodes:
+        try:
+            obj, is_created = Blocked_Barcode.objects.get_or_create(barcode=barcode)
+            if is_created:
+                created += 1
+        except Exception as e:
+            # Можно добавить логирование ошибки
+            continue
+
+    return Response({"message": f"Добавлено {created} штрихкодов."}, status=status.HTTP_201_CREATED)
+
