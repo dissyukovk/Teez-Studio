@@ -2186,7 +2186,6 @@ def add_blocked_barcodes(request):
     if not barcodes_raw:
         return Response({"error": "Поле 'barcodes' обязательно."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Если передан текст, разбиваем по строкам
     if isinstance(barcodes_raw, str):
         barcodes = [b.strip() for b in barcodes_raw.splitlines() if b.strip()]
     elif isinstance(barcodes_raw, list):
@@ -2198,23 +2197,11 @@ def add_blocked_barcodes(request):
         return Response({"error": "Нет валидных штрихкодов для добавления."}, status=status.HTTP_400_BAD_REQUEST)
 
     created = 0
-    errors = []
     for barcode in barcodes:
-        try:
-            # Каждая вставка в отдельной атомарной транзакции
-            with transaction.atomic():
-                obj, is_created = Blocked_Barcode.objects.get_or_create(barcode=barcode)
-            if is_created:
-                created += 1
-        except IntegrityError as e:
-            # Если возникает ошибка уникальности, можно её игнорировать
-            if "unique" in str(e).lower():
-                continue
-            errors.append(f"{barcode}: {str(e)}")
-        except Exception as e:
-            errors.append(f"{barcode}: {str(e)}")
+        # Убираем try/except для диагностики
+        obj, is_created = Blocked_Barcode.objects.get_or_create(barcode=barcode)
+        if is_created:
+            created += 1
 
-    response_message = f"Добавлено {created} штрихкодов."
-    if errors:
-        response_message += " Ошибки: " + "; ".join(errors)
-    return Response({"message": response_message}, status=status.HTTP_201_CREATED)
+    return Response({"message": f"Добавлено {created} штрихкодов."}, status=status.HTTP_201_CREATED)
+
