@@ -2178,6 +2178,7 @@ def update_product_info(request):
 
     return Response({"message": f"Информация обновлена для {updated_count} товаров."}, status=status.HTTP_200_OK)
 
+@transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_blocked_barcodes(request):
@@ -2197,15 +2198,23 @@ def add_blocked_barcodes(request):
         return Response({"error": "Нет валидных штрихкодов для добавления."}, status=status.HTTP_400_BAD_REQUEST)
 
     created = 0
+    errors = []
     for barcode in barcodes:
         try:
+            # Каждая вставка в отдельной атомарной транзакции
             with transaction.atomic():
                 obj, is_created = Blocked_Barcode.objects.get_or_create(barcode=barcode)
             if is_created:
                 created += 1
+        except IntegrityError as e:
+            # Если возникает ошибка уникальности, можно её игнорировать
+            if "unique" in str(e).lower():
+                continue
+            errors.append(f"{barcode}: {str(e)}")
         except Exception as e:
-            # Можно добавить логирование ошибки: например, logging.error(e)
-            continue
+            errors.append(f"{barcode}: {str(e)}")
 
-    return Response({"message": f"Добавлено {created} штрихкодов."}, status=status.HTTP_201_CREATED)
-
+    response_message = f"Добавлено {created} штрихкодов."
+    if errors:
+        response_message += " Ошибки: " + "; ".join(errors)
+    return Response({"message": response_message}, status=status.HTTP_201_CREATED)
