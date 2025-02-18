@@ -2199,11 +2199,12 @@ def add_blocked_barcodes(request):
     created = 0
     for barcode in barcodes:
         try:
-            obj, is_created = Blocked_Barcode.objects.get_or_create(barcode=barcode)
+            with transaction.atomic():
+                obj, is_created = Blocked_Barcode.objects.get_or_create(barcode=barcode)
             if is_created:
                 created += 1
         except Exception as e:
-            # Можно добавить логирование ошибки
+            # Можно добавить логирование ошибки: например, logging.error(e)
             continue
 
     return Response({"message": f"Добавлено {created} штрихкодов."}, status=status.HTTP_201_CREATED)
