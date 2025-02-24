@@ -3,7 +3,7 @@ import { Table, Input, Button, Space, message } from 'antd';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 
-const { TextArea } = Input; // для многострочного ввода
+const { TextArea } = Input;
 
 const ReadyPhotosPage = () => {
   // Данные для таблицы
@@ -11,14 +11,17 @@ const ReadyPhotosPage = () => {
   const [loading, setLoading] = useState(false);
 
   // Параметры фильтра
-  const [barcodesMulti, setBarcodesMulti] = useState(''); // многострочный ввод для штрихкодов
-  const [seller, setSeller] = useState('');               // поиск по ID магазина
+  const [barcodesMulti, setBarcodesMulti] = useState('');
+  const [seller, setSeller] = useState('');
 
   // Параметры сортировки/пагинации
-  const [ordering, setOrdering] = useState('-retouch_request__creation_date'); 
+  const [ordering, setOrdering] = useState('-retouch_request__creation_date');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [totalCount, setTotalCount] = useState(0);
+
+  // Список штрихкодов, для которых не найдены записи
+  const [notFound, setNotFound] = useState([]);
 
   // Колонки таблицы
   const columns = [
@@ -26,7 +29,7 @@ const ReadyPhotosPage = () => {
       title: 'Штрихкод',
       dataIndex: 'barcode',
       key: 'barcode',
-      sorter: true, // говорим antd, что колонка поддерживает сортировку
+      sorter: true,
     },
     {
       title: 'Наименование',
@@ -56,36 +59,46 @@ const ReadyPhotosPage = () => {
   ];
 
   // Функция загрузки данных (server-side filter & sort)
-  const fetchData = async (page = 1, size = 50, order = '-retouch_request__creation_date') => {
+  const fetchData = async (
+    page = 1,
+    size = 50,
+    order = '-retouch_request__creation_date'
+  ) => {
     setLoading(true);
     try {
       // Собираем query-параметры
       const params = {
         page,
         page_size: size,
-        ordering: order, // например, -retouch_request__creation_date
+        ordering: order,
       };
 
       // Если пользователь ввёл несколько штрихкодов (каждый на своей строке),
       // объединим их в одну строку через запятую
       if (barcodesMulti.trim()) {
         const lines = barcodesMulti
-          .split('\n')        // разбиваем по строкам
+          .split('\n')
           .map((l) => l.trim())
-          .filter(Boolean);   // убираем пустые
-        params.barcodes = lines.join(','); 
+          .filter(Boolean);
+        params.barcodes = lines.join(',');
       }
 
       if (seller.trim()) {
-        // Если бэкенд поддерживает ?seller=...,
-        // возможно, нужно поле ?search_seller=... — зависит от логики
         params.seller = seller.trim();
       }
 
-      const response = await axios.get('http://192.168.7.230:8000/ft/ready-photos/', { params });
+      const response = await axios.get(
+        'http://192.168.7.230:8000/ft/ready-photos/',
+        { params }
+      );
       const results = response.data.results || [];
       setData(results);
       setTotalCount(response.data.count || 0);
+
+      // Обновляем список штрихкодов, для которых не найдены записи
+      // (если бэкенд возвращает not_found)
+      setNotFound(response.data.not_found || []);
+
       setCurrentPage(page);
       setPageSize(size);
     } catch (error) {
@@ -104,19 +117,13 @@ const ReadyPhotosPage = () => {
 
   // При изменении в таблице (пагинация, сортировка)
   const handleTableChange = (pagination, filters, sorter) => {
-    // sorter: { field, order } => order "ascend" / "descend" / undefined
     let newOrdering = ordering;
     if (sorter.field) {
-      newOrdering = sorter.order === 'descend'
-        ? `-${sorter.field}`
-        : sorter.field;
+      newOrdering =
+        sorter.order === 'descend' ? `-${sorter.field}` : sorter.field;
     }
 
-    fetchData(
-      pagination.current,
-      pagination.pageSize,
-      newOrdering
-    );
+    fetchData(pagination.current, pagination.pageSize, newOrdering);
   };
 
   // Кнопка "Поиск"
@@ -145,15 +152,18 @@ const ReadyPhotosPage = () => {
         params.seller = seller.trim();
       }
 
-      const resp = await axios.get('http://192.168.7.230:8000/ft/ready-photos/', { params });
+      const resp = await axios.get(
+        'http://192.168.7.230:8000/ft/ready-photos/',
+        { params }
+      );
       const allResults = resp.data.results || [];
 
       // Формируем массив для Excel
-      const wsData = allResults.map(item => ({
-        'Штрихкод': Number(item.barcode) || item.barcode, // если хотим числовой
-        'Наименование': item.product_name || '',
-        'ID_магазина': item.seller || 0,
-        'Ссылка': item.retouch_link || '',
+      const wsData = allResults.map((item) => ({
+        Штрихкод: Number(item.barcode) || item.barcode,
+        Наименование: item.product_name || '',
+        ID_магазина: item.seller || 0,
+        Ссылка: item.retouch_link || '',
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(wsData);
@@ -161,7 +171,11 @@ const ReadyPhotosPage = () => {
       XLSX.utils.book_append_sheet(workbook, worksheet, 'ReadyPhotos');
 
       const now = new Date();
-      const fileName = `ready_photos_${now.toISOString().slice(0,19).replace('T','_').replace(/:/g,'-')}.xlsx`;
+      const fileName = `ready_photos_${now
+        .toISOString()
+        .slice(0, 19)
+        .replace('T', '_')
+        .replace(/:/g, '-')}.xlsx`;
       XLSX.writeFile(workbook, fileName);
       message.success('Файл Excel сформирован');
     } catch (error) {
@@ -173,29 +187,48 @@ const ReadyPhotosPage = () => {
   return (
     <div style={{ padding: 16 }}>
       <h2>Готовые фото</h2>
-      <Space style={{ marginBottom: 16 }}>
-        {/* Многострочное поле для штрихкодов */}
-        <TextArea
-          placeholder="Вставьте штрихкоды, каждый в новой строке"
-          value={barcodesMulti}
-          onChange={(e) => setBarcodesMulti(e.target.value)}
-          style={{ width: 300 }}
-          rows={4}
-        />
-        <Input
-          placeholder="ID магазина"
-          value={seller}
-          onChange={(e) => setSeller(e.target.value)}
-          style={{ width: 180 }}
-        />
-        <Button type="primary" onClick={handleSearch}>
-          Поиск
-        </Button>
-        <Button onClick={handleExportExcel}>
-          Скачать в Excel
-        </Button>
-      </Space>
+      {/* Верхний блок, в котором слева поля, а справа не найденные штрихкоды */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+        }}
+      >
+        {/* Левая часть: поля и кнопки */}
+        <Space align="start">
+          <TextArea
+            placeholder="Вставьте штрихкоды, каждый в новой строке"
+            value={barcodesMulti}
+            onChange={(e) => setBarcodesMulti(e.target.value)}
+            style={{ width: 300 }}
+            rows={4}
+          />
+          <Input
+            placeholder="ID магазина"
+            value={seller}
+            onChange={(e) => setSeller(e.target.value)}
+            style={{ width: 180 }}
+          />
+          <Button type="primary" onClick={handleSearch}>
+            Поиск
+          </Button>
+          <Button onClick={handleExportExcel}>Скачать в Excel</Button>
+        </Space>
+        {/* Правая часть: не найденные штрихкоды */}
+        <div style={{ marginLeft: 16 }}>
+          <h3>Не найденные штрихкоды</h3>
+          <TextArea
+            readOnly
+            value={notFound.join('\n')}
+            rows={4}
+            style={{ width: 200 }}
+            placeholder="Нет"
+          />
+        </div>
+      </div>
 
+      {/* Таблица на всю ширину под верхним блоком */}
       <Table
         rowKey={(record) => `${record.barcode}_${record.seller}`}
         columns={columns}
