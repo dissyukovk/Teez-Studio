@@ -837,24 +837,17 @@ class ReadyPhotosListView(generics.ListAPIView):
     ordering_fields = [
         'st_request_product__product__barcode',
         'st_request_product__product__name',
-        # Было: 'seller' — но реально это product.seller
         'st_request_product__product__seller',
         'retouch_request__creation_date',
         'retouch_link',
     ]
-    # Дефолтная сортировка (по штрихкоду, возм. по убыванию добавьте "-"):
     ordering = ['st_request_product__product__barcode']
-
-    # Поля для поиска (search=?)
     search_fields = [
         'st_request_product__product__barcode',
         'st_request_product__product__name',
     ]
 
     def get_queryset(self):
-        """ Возвращаем только те RRP, у которых retouch_status=2 (Готов)
-            и sretouch_status=1 (Проверено).
-        """
         qs = RetouchRequestProduct.objects.filter(
             retouch_status_id=2,
             sretouch_status_id=1
@@ -863,20 +856,53 @@ class ReadyPhotosListView(generics.ListAPIView):
             'st_request_product__product'
         )
 
-        # 1) Массовый поиск по штрихкодам (barcodes=123,456)
+        # Фильтрация по штрихкодам:
         barcodes_str = self.request.query_params.get('barcodes')
         if barcodes_str:
             bc_list = [b.strip() for b in barcodes_str.split(',') if b.strip()]
             qs = qs.filter(st_request_product__product__barcode__in=bc_list)
 
-        # 2) Поиск по seller (ID магазина)
-        #    На фронте вы передаёте params.seller = seller.trim().
-        #    Нужно, чтобы бэкенд фильтровал product.seller=?
+        # Фильтрация по seller:
         seller = self.request.query_params.get('seller')
         if seller:
             qs = qs.filter(st_request_product__product__seller=seller)
 
         return qs
+
+    def list(self, request, *args, **kwargs):
+        # Получаем отсортированный, отфильтрованный queryset
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Если переданы штрихкоды, вычисляем отсутствующие:
+        barcodes_str = request.query_params.get('barcodes')
+        not_found = []
+        if barcodes_str:
+            bc_list = [b.strip() for b in barcodes_str.split(',') if b.strip()]
+            # Получаем найденные штрихкоды:
+            found_barcodes = list(queryset.values_list('st_request_product__product__barcode', flat=True).distinct())
+            # Определяем, какие штрихкоды не найдены:
+            not_found = [b for b in bc_list if b not in found_barcodes]
+
+        # Применяем пагинацию, если она настроена:
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response_data = self.get_paginated_response(serializer.data).data
+        else:
+            serializer = self.get_serializer(queryset, many=True)
+            response_data = serializer.data
+
+        # Добавляем в ответ массив not_found, если фильтрация по штрихкодам была:
+        if barcodes_str:
+            if isinstance(response_data, dict):
+                response_data['not_found'] = not_found
+            else:
+                response_data = {
+                    'results': response_data,
+                    'not_found': not_found
+                }
+
+        return Response(response_data)
 
 class SRStatisticView(APIView):
     """
