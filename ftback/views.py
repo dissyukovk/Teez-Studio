@@ -140,7 +140,6 @@ class UserInfoView(APIView):
             "groups": list(groups),  # Добавляем список групп
         })
 
-
 class UpdateOnWorkView(APIView):
     permission_classes = [IsAuthenticated]
 

@@ -72,7 +72,8 @@ from .views import (
     accepted_products_by_category,
     NofotoListView,
     update_product_info,
-    add_blocked_barcodes
+    add_blocked_barcodes,
+    order_product_list
 )
 
 class UserDetailView(APIView):
@@ -188,4 +189,5 @@ urlpatterns = [
     
     # Данные о пользователе
     path('api/user/', UserDetailView.as_view(), name='user_detail'),
+    path('order-products/', order_product_list, name='order_product_list'),
 ]

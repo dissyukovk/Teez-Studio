@@ -2205,3 +2205,17 @@ def add_blocked_barcodes(request):
 
     return Response({"message": f"Добавлено {created} штрихкодов."}, status=status.HTTP_201_CREATED)
 
+def order_product_list(request):
+    # Подзапрос для получения последней накладной для товара
+    latest_invoice = InvoiceProduct.objects.filter(
+        product=OuterRef('product')
+    ).order_by('-invoice__date', '-invoice__id')
+    
+    # Аннотируем OrderProduct, добавляя поле last_invoice_number
+    order_products = OrderProduct.objects.select_related(
+        'order', 'product', 'product__move_status'
+    ).annotate(
+        last_invoice_number=Subquery(latest_invoice.values('invoice__InvoiceNumber')[:1])
+    )
+    
+    return render(request, 'core/order_product_table.html', {'order_products': order_products})
