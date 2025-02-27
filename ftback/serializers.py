@@ -708,6 +708,7 @@ class ReadyPhotosSerializer(serializers.ModelSerializer):
     - seller        => product.seller
     - retouch_date  => retouch_request.creation_date
     - retouch_link  => retouch_link
+    - photo_date    => st_request.request.photo_date (формат: дд.мм.гггг)
     """
     barcode = serializers.CharField(
         source='st_request_product.product.barcode', read_only=True
@@ -722,6 +723,11 @@ class ReadyPhotosSerializer(serializers.ModelSerializer):
         source='retouch_request.creation_date', read_only=True
     )
     retouch_link = serializers.CharField(read_only=True)
+    photo_date = serializers.DateTimeField(
+        source='st_request_product.request.photo_date',
+        format="%d.%m.%Y",
+        read_only=True
+    )
 
     class Meta:
         model = RetouchRequestProduct
@@ -731,6 +737,7 @@ class ReadyPhotosSerializer(serializers.ModelSerializer):
             'seller',
             'retouch_date',
             'retouch_link',
+            'photo_date',
         ]
 
 class StockmanIncomeSerializer(serializers.Serializer):
@@ -806,3 +813,24 @@ class NofotoCreateSerializer(serializers.Serializer):
     Сериалайзер для принятия штрихкода и создания записи Nofoto.
     """
     barcode = serializers.CharField(max_length=13)
+
+class ProductOperationSerializer(serializers.ModelSerializer):
+    barcode = serializers.CharField(source='product.barcode')
+    name = serializers.CharField(source='product.name')
+    seller = serializers.IntegerField(source='product.seller')
+    operation_type = serializers.CharField(source='operation_type.name', read_only=True)
+    user = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductOperation
+        fields = ['barcode', 'name', 'seller', 'operation_type', 'user', 'date', 'comment']
+
+    def get_user(self, obj):
+        if obj.user:
+            return f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return None
+
+class ProductOperationTypesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductOperationTypes
+        fields = ['id', 'name']

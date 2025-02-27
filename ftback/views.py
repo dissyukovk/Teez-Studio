@@ -5,6 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Q
 from django.utils import timezone
 from django.http import JsonResponse
+from django_filters import rest_framework as django_filters
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -13,7 +14,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import generics, permissions, status, filters
 from .pagination import StandardResultsSetPagination, SRReadyProductsPagination, RetouchRequestPagination, ReadyPhotosPagination
-from .filters import SRReadyProductFilter
+from .filters import SRReadyProductFilter, ProductOperationFilter
 from core.models import (
     UserProfile,
     Product,
@@ -72,7 +73,9 @@ from .serializers import (
     StockmanDefectSerializer,
     StockmanOpenedSerializer,
     STRequestCreateSerializer,
-    NofotoCreateSerializer
+    NofotoCreateSerializer,
+    ProductOperationSerializer,
+    ProductOperationTypesSerializer
 )
 
 # CRUD для UserProfile
@@ -852,7 +855,8 @@ class ReadyPhotosListView(generics.ListAPIView):
             sretouch_status_id=1
         ).select_related(
             'retouch_request',
-            'st_request_product__product'
+            'st_request_product__product',
+            'st_request_product__request'  # Для доступа к полю photo_date модели STRequest
         )
 
         # Фильтрация по штрихкодам:
@@ -861,10 +865,28 @@ class ReadyPhotosListView(generics.ListAPIView):
             bc_list = [b.strip() for b in barcodes_str.split(',') if b.strip()]
             qs = qs.filter(st_request_product__product__barcode__in=bc_list)
 
-        # Фильтрация по seller:
-        seller = self.request.query_params.get('seller')
-        if seller:
-            qs = qs.filter(st_request_product__product__seller=seller)
+        # Фильтрация по магазинам (поддержка нескольких значений через запятую):
+        seller_str = self.request.query_params.get('seller')
+        if seller_str:
+            seller_list = [s.strip() for s in seller_str.split(',') if s.strip()]
+            qs = qs.filter(st_request_product__product__seller__in=seller_list)
+
+        # Фильтрация по диапазону дат (photo_date из модели STRequest)
+        date_from_str = self.request.query_params.get('date_from')
+        date_to_str = self.request.query_params.get('date_to')
+        if date_from_str and date_to_str:
+            try:
+                date_from = datetime.strptime(date_from_str, "%d.%m.%Y")
+                date_to = datetime.strptime(date_to_str, "%d.%m.%Y")
+                # Сдвигаем дату конца на 1 день, чтобы включить её в диапазон
+                date_to = date_to + timedelta(days=1)
+                qs = qs.filter(
+                    st_request_product__request__photo_date__gte=date_from,
+                    st_request_product__request__photo_date__lt=date_to
+                )
+            except ValueError:
+                # Если формат даты неверный, можно добавить обработку ошибки
+                pass
 
         return qs
 
@@ -1488,3 +1510,50 @@ def sp_daily_stats(request):
         "assistants": assistants_result
     }
     return Response(response_data, status=status.HTTP_200_OK)
+
+class ProductOperationHistoryNew(PageNumberPagination):
+    page_size = 50  # можно настроить размер страницы
+    page_size_query_param = 'page_size'
+    max_page_size = 999999
+
+class ProductOperationListView(generics.ListAPIView):
+    queryset = ProductOperation.objects.select_related('product', 'operation_type', 'user').all()
+    serializer_class = ProductOperationSerializer
+    pagination_class = ProductOperationHistoryNew
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = ProductOperationFilter
+    ordering_fields = [
+        'product__barcode',
+        'product__name',
+        'product__seller',
+        'operation_type__name',
+        'user__first_name',
+        'date',
+        'comment',
+    ]
+    ordering = ['-date']
+
+    def list(self, request, *args, **kwargs):
+        qs = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response_data = self.get_paginated_response(serializer.data).data
+        else:
+            serializer = self.get_serializer(qs, many=True)
+            response_data = serializer.data
+
+        if 'barcode' in request.query_params:
+            barcode_param = request.query_params.get('barcode')
+            barcodes_requested = [b.strip() for b in barcode_param.split(',') if b.strip()]
+            found_barcodes = list(qs.values_list('product__barcode', flat=True).distinct())
+            not_found = [b for b in barcodes_requested if b not in found_barcodes]
+            response_data['not_found_barcodes'] = not_found
+
+        return Response(response_data)
+
+
+class ProductOperationTypesListView(generics.ListAPIView):
+    queryset = ProductOperationTypes.objects.all()
+    serializer_class = ProductOperationTypesSerializer
+    pagination_class = None

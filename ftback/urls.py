@@ -54,4 +54,6 @@ urlpatterns = [
     path('sp/assign-assistant/', views.sp_assign_assistant, name='assign_assistant'),
     path('sp/clear-assistant/', views.sp_clear_assistant, name='clear_assistant'),
     path('sp/daily_stats/', views.sp_daily_stats, name='daily_stats'),
+    path('product-operations/', views.ProductOperationListView.as_view(), name='product-operation-list'),
+    path('product-operation-types/', views.ProductOperationTypesListView.as_view(), name='product-operation-types-list'),
 ]

@@ -15,7 +15,7 @@ from django.contrib.auth.models import User, Group
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer, UserURLsSerializer, STRequestHistorySerializer, NofotoListSerializer
+from .serializers import UserSerializer, ProductSerializer, STRequestSerializer, InvoiceSerializer, StatusSerializer, ProductOperationSerializer, OrderSerializer, RetouchStatusSerializer, STRequestStatusSerializer, OrderStatusSerializer, ProductCategorySerializer, UserURLsSerializer, STRequestHistorySerializer, NofotoListSerializer, DefectSerializer
 from .pagination import NofotoPagination
 from django.db import transaction, IntegrityError
 from django.db.models import Count, Max, F, Value, Q, Sum, OuterRef, Subquery
@@ -35,12 +35,12 @@ logger = logging.getLogger(__name__)
 class ProductPagination(PageNumberPagination):
     page_size = 100
     page_size_query_param = 'page_size'
-    max_page_size = 100000
+    max_page_size = 999999
 
 class OrderPagination(PageNumberPagination):
-    page_size = 10
+    page_size = 100
     page_size_query_param = 'page_size'
-    max_page_size = 100
+    max_page_size = 1000
 
 class ProductHistoryPagination(PageNumberPagination):
     page_size = 100
@@ -48,9 +48,9 @@ class ProductHistoryPagination(PageNumberPagination):
     max_page_size = 1000
 
 class CategoryPagination(PageNumberPagination):
-    page_size = 10  # Default page size
+    page_size = 100  # Default page size
     page_size_query_param = 'page_size'
-    max_page_size = 50  # Max page size for user
+    max_page_size = 999999  # Max page size for user
 
 # CRUD для пользователей (User) с фильтрацией и сортировкой
 class UserViewSet(viewsets.ModelViewSet):
@@ -1689,10 +1689,8 @@ def categories_list(request):
 
 @api_view(['GET'])
 def defect_operations_list(request):
-    # Filter for operations with type ID 25 (defect)
     defect_operations = ProductOperation.objects.filter(operation_type_id__in=[25, 30])
 
-    # Search and filter parameters
     barcode = request.query_params.get('barcode', None)
     product_name = request.query_params.get('name', None)
     start_date = request.query_params.get('start_date', None)
@@ -1700,30 +1698,33 @@ def defect_operations_list(request):
     sort_field = request.query_params.get('sort_field', 'date')
     sort_order = request.query_params.get('sort_order', 'desc')
 
-    # Filter by barcode and product name
+    # Массовый поиск по штрихкодам
     if barcode:
-        defect_operations = defect_operations.filter(product__barcode__icontains=barcode)
+        if ',' in barcode:
+            barcodes_list = [b.strip() for b in barcode.split(',') if b.strip()]
+            defect_operations = defect_operations.filter(product__barcode__in=barcodes_list)
+        else:
+            defect_operations = defect_operations.filter(product__barcode__icontains=barcode)
+
     if product_name:
         defect_operations = defect_operations.filter(product__name__icontains=product_name)
 
-    # Filter by date
+    # Фильтрация по датам (включая границы)
     date_format = '%Y-%m-%d'
     try:
         if start_date:
-            start_date = datetime.strptime(start_date, date_format)
-            defect_operations = defect_operations.filter(date__gte=start_date)
+            start_date_obj = datetime.strptime(start_date, date_format)
+            defect_operations = defect_operations.filter(date__gte=start_date_obj)
         if end_date:
-            end_date = datetime.strptime(end_date, date_format)
-            defect_operations = defect_operations.filter(date__lte=end_date)
+            end_date_obj = datetime.strptime(end_date, date_format)
+            defect_operations = defect_operations.filter(date__lte=end_date_obj)
     except ValueError:
         return Response({"error": "Invalid date format, expected YYYY-MM-DD"}, status=400)
 
-    # Add user full name annotation for sorting
     defect_operations = defect_operations.annotate(
         user_full_name=Concat('user__first_name', Value(' '), 'user__last_name')
     )
 
-    # Validate and apply sorting
     allowed_sort_fields = ['date', 'product__barcode', 'product__name', 'user_full_name']
     if sort_field not in allowed_sort_fields:
         return Response({"error": f"Invalid sort field: {sort_field}"}, status=400)
@@ -1733,16 +1734,12 @@ def defect_operations_list(request):
 
     defect_operations = defect_operations.order_by(sort_field)
 
-    # Pagination
     paginator = ProductHistoryPagination()
     paginated_operations = paginator.paginate_queryset(defect_operations, request)
-
-    # Проверка, если запрашиваемая страница не найдена
     if paginated_operations is None:
         raise NotFound(detail="Invalid page.")
 
-    # Serialize data
-    serializer = ProductOperationSerializer(paginated_operations, many=True)
+    serializer = DefectSerializer(paginated_operations, many=True)
     return paginator.get_paginated_response(serializer.data)
 
 class PhotographerStatsView(APIView):
@@ -1881,44 +1878,59 @@ class ReadyPhotosView(APIView):
 
     def get(self, request):
         barcode = request.query_params.get('barcode', None)
-        date = request.query_params.get('date', None)
+        date_from = request.query_params.get('date_from', None)
+        date_to = request.query_params.get('date_to', None)
         seller_id = request.query_params.get('seller_id', None)
         sort_field = request.query_params.get('sort_field', 'product__barcode')  # Default sort by product barcode
         sort_order = request.query_params.get('sort_order', 'asc')
 
-        # Start with filtering STRequestProduct entries based on the specified status conditions
+        # Начинаем с фильтрации записей STRequestProduct по указанным условиям статуса
         ready_products = STRequestProduct.objects.filter(
             Q(request__status_id__in=[8, 9]) & Q(retouch_status_id=2)
         ).select_related('product', 'request')
 
-        # Filter by barcode if provided
+        # Фильтрация по штрихкодам (поддержка нескольких значений)
         if barcode:
-            ready_products = ready_products.filter(product__barcode__icontains=barcode)
+            barcode_list = [b.strip() for b in barcode.split(',') if b.strip()]
+            ready_products = ready_products.filter(product__barcode__in=barcode_list)
 
-        # Filter by seller_id if provided
+        # Фильтрация по seller_id (поддержка нескольких значений)
         if seller_id:
-            ready_products = ready_products.filter(product__seller__icontains=seller_id)
+            seller_list = [s.strip() for s in seller_id.split(',') if s.strip()]
+            ready_products = ready_products.filter(product__seller__in=seller_list)
 
-        # Filter by retouch_date if provided
-        if date:
+        # Фильтрация по диапазону дат (retouch_date из модели request)
+        if date_from and date_to:
+            try:
+                from_date_obj = datetime.strptime(date_from, "%Y-%m-%d")
+                to_date_obj = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
+                ready_products = ready_products.filter(
+                    request__retouch_date__gte=from_date_obj,
+                    request__retouch_date__lt=to_date_obj
+                )
+            except ValueError:
+                return Response({"error": "Invalid date format. Use YYYY-MM-DD for date_from and date_to."}, status=400)
+        # Фильтрация по конкретной дате, если передан параметр date
+        elif request.query_params.get('date', None):
+            date = request.query_params.get('date')
             try:
                 date_obj = datetime.strptime(date, "%Y-%m-%d")
                 ready_products = ready_products.filter(request__retouch_date__date=date_obj)
             except ValueError:
                 return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
 
-        # Handle sorting by related fields correctly
+        # Корректная сортировка по связанным полям
         if sort_field in ['barcode', 'name', 'seller_id']:
             sort_field = f'product__{sort_field}'
         if sort_order == 'desc':
             sort_field = f'-{sort_field}'
         ready_products = ready_products.order_by(sort_field)
 
-        # Paginate results
+        # Пагинация результатов
         paginator = ProductPagination()
         paginated_ready_products = paginator.paginate_queryset(ready_products, request)
 
-        # Serialize data
+        # Сериализация данных
         data = [
             {
                 "barcode": rp.product.barcode,
@@ -2153,7 +2165,13 @@ class NofotoListView(ListAPIView):
             except ValueError:
                 pass
 
-        # 3) Фильтр по штрихкодам (через параметр ?barcodes=111,222)
+        # 3) Фильтр по магазинам (через параметр ?seller=111,222)
+        seller_str = self.request.query_params.get('seller')
+        if seller_str:
+            sellers = [s.strip() for s in seller_str.split(',') if s.strip()]
+            qs = qs.filter(product__seller__in=sellers)
+
+        # 4) Фильтр по штрихкодам (через параметр ?barcodes=111,222)
         barcodes_str = self.request.query_params.get('barcodes')
         if barcodes_str:
             splitted = [bc.strip() for bc in barcodes_str.split(',') if bc.strip()]

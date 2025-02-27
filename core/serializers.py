@@ -156,6 +156,20 @@ class ProductOperationSerializer(serializers.ModelSerializer):
     def get_user_full_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}" if obj.user else "Unknown"
 
+class DefectSerializer(serializers.ModelSerializer):
+    operation_type_name = serializers.CharField(source='operation_type.name', read_only=True)
+    user_full_name = serializers.SerializerMethodField()
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    barcode = serializers.CharField(source='product.barcode', read_only=True)
+    seller = serializers.IntegerField(source='product.seller', read_only=True)  # или CharField, если поле не числовое
+
+    class Meta:
+        model = ProductOperation
+        fields = ['barcode', 'product_name', 'user_full_name', 'date', 'comment', 'operation_type_name', 'seller']
+
+    def get_user_full_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}" if obj.user else "Unknown"
+
 class OrderStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderStatus
