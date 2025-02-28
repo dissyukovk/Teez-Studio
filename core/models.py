@@ -118,6 +118,9 @@ class Order(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='accept_user'
     )  # Пользователь, который принял товар
 
+    class Meta:
+        ordering = ['OrderNumber']
+
     def __str__(self):
         return str(self.OrderNumber)
 

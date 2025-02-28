@@ -888,7 +888,6 @@ def order_list(request):
     serializer = OrderSerializer(paginated_orders, many=True)
     return paginator.get_paginated_response(serializer.data)
 
-
 @api_view(['GET'])
 def request_details(request, request_number):
     try:

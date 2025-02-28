@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Layout, Table, Input, Button, Space, DatePicker, Pagination, message, Typography } from 'antd';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
-import dayjs from 'dayjs';
 import Sidebar from '../../components/Layout/Sidebar';
 import { API_BASE_URL } from '../../utils/config';
 
@@ -95,6 +94,7 @@ const ReadyPhotos = ({ darkMode, setDarkMode }) => {
 
   // Экспорт в Excel
   const handleExportExcel = async () => {
+    const hideLoading = message.loading('Формирование файла Excel...', 0);
     try {
       const params = {
         page_size: 500000, // Получаем все данные без пагинации
@@ -118,7 +118,7 @@ const ReadyPhotos = ({ darkMode, setDarkMode }) => {
       const resp = await axios.get(`${API_BASE_URL}/public/ready-photos/`, { params });
       const allResults = resp.data.results || [];
       const formattedData = allResults.map(item => ({
-        'Штрихкод': item.barcode,
+        'Штрихкод': Number(item.barcode),
         'Наименование': item.name,
         'ID магазина': item.seller_id,
         'Ссылка на фото': item.retouch_link,
@@ -129,6 +129,7 @@ const ReadyPhotos = ({ darkMode, setDarkMode }) => {
       const now = new Date();
       const fileName = `readyphotos_1.0_${now.toISOString().slice(0, 19).replace(/:/g, '-')}.xlsx`;
       XLSX.writeFile(workbook, fileName);
+      hideLoading();
       message.success('Excel-файл сформирован');
     } catch (error) {
       console.error('Ошибка экспорта в Excel:', error);

@@ -9,6 +9,7 @@ import ReadyPhotos from './pages/guest/ReadyPhotos';
 import NofotoPage from './pages/guest/nofoto';
 import DefectOperationsPage from './pages/guest/DefectOperationsPage';
 import ProductOperationsPage from './pages/guest/ProductOperationsPage';
+import PublicOrdersPage from './pages/guest/PublicOrders';
 
 function App() {
   const [darkMode, setDarkMode] = useState(
@@ -65,6 +66,10 @@ function App() {
           <Route
             path="/barcode-history"
             element={<ProductOperationsPage darkMode={darkMode} setDarkMode={setDarkMode} />}
+          />
+          <Route
+            path="/public-orders"
+            element={<PublicOrdersPage darkMode={darkMode} setDarkMode={setDarkMode} />}
           />
         </Routes>
       </BrowserRouter>

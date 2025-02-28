@@ -143,6 +143,11 @@ def send_tvd_data(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Произошла ошибка: {str(e)}")
 
+# Обработчик команды /chatid
+@bot.message_handler(commands=['chatid'])
+def send_chatid(message):
+    bot.reply_to(message, f"ID чата: {message.chat.id}")
+
 # Функция для запуска планировщика задач в отдельном потоке
 def scheduler_thread():
     schedule.every().day.at("20:30").do(send_daily_stats)

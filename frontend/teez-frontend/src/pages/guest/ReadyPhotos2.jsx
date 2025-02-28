@@ -89,6 +89,7 @@ const ReadyPhotos2 = ({ darkMode, setDarkMode }) => {
 
   // Скачивание Excel
   const handleExportExcel = async () => {
+    const hideLoading = message.loading('Формирование файла Excel...', 0);
     try {
       const params = {
         page_size: 999999,
@@ -118,7 +119,7 @@ const ReadyPhotos2 = ({ darkMode, setDarkMode }) => {
 
       // Формируем лист
       const wsData = allData.map((item) => ({
-        Штрихкод: item.barcode,
+        'Штрихкод': Number(item.barcode),
         Наименование: item.product_name,
         'ID магазина': item.seller,
         'Дата съёмки': item.photo_date,
@@ -131,6 +132,7 @@ const ReadyPhotos2 = ({ darkMode, setDarkMode }) => {
       const now = new Date();
       const fileName = `gotovye_foto_2_0_${now.toISOString().slice(0, 19)}.xlsx`;
       XLSX.writeFile(workbook, fileName);
+      hideLoading();
       message.success('Excel-файл сформирован');
     } catch (error) {
       console.error(error);

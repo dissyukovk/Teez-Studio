@@ -15,6 +15,9 @@ const DefectOperationsPage = ({ darkMode, setDarkMode }) => {
     document.title = 'Список браков';
   }, []);
 
+  // Используем message.useMessage для индикатора экспорта Excel
+  const [messageApi, contextHolder] = message.useMessage();
+
   // Состояния для данных и фильтров
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,6 +44,11 @@ const DefectOperationsPage = ({ darkMode, setDarkMode }) => {
       sorter: true,
     },
     {
+        title: 'Магазин',
+        dataIndex: 'seller',
+        key: 'seller',
+    },
+    {
       title: 'Пользователь',
       dataIndex: 'user_full_name',
       key: 'user_full_name',
@@ -57,16 +65,6 @@ const DefectOperationsPage = ({ darkMode, setDarkMode }) => {
       title: 'Комментарий',
       dataIndex: 'comment',
       key: 'comment',
-    },
-    {
-      title: 'Тип операции',
-      dataIndex: 'operation_type_name',
-      key: 'operation_type_name',
-    },
-    {
-      title: 'Магазин',
-      dataIndex: 'seller',
-      key: 'seller',
     }
   ];
 
@@ -143,13 +141,18 @@ const DefectOperationsPage = ({ darkMode, setDarkMode }) => {
 
   // По нажатию на кнопку «Поиск» выполняется запрос с текущими параметрами.
   const handleSearch = () => {
-    // Можно сбросить страницу на первую при новом поиске
     setCurrentPage(1);
     fetchData(1, pageSize, ordering);
   };
 
-  // Экспорт данных в Excel (использует те же фильтры, что и поиск)
+  // Экспорт данных в Excel с индикатором загрузки
   const handleExportExcel = async () => {
+    // Показываем индикатор загрузки
+    const hideLoading = messageApi.open({
+      type: 'loading',
+      content: 'Формирование файла Excel...',
+      duration: 0,
+    });
     try {
       const params = {
         page_size: 500000,
@@ -175,13 +178,12 @@ const DefectOperationsPage = ({ darkMode, setDarkMode }) => {
       const resp = await axios.get(`${API_BASE_URL}/public/defect-operations/`, { params });
       const allResults = resp.data.results || [];
       const wsData = allResults.map(item => ({
-        'Штрихкод': item.barcode,
+        'Штрихкод': Number(item.barcode),
         'Наименование': item.product_name,
+        'Магазин': item.seller,
         'Пользователь': item.user_full_name,
         'Дата': item.date ? dayjs(item.date).format('YYYY-MM-DD HH:mm') : '',
         'Комментарий': item.comment,
-        'Тип операции': item.operation_type_name,
-        'Магазин': item.seller,
       }));
       const worksheet = XLSX.utils.json_to_sheet(wsData);
       const workbook = XLSX.utils.book_new();
@@ -189,15 +191,18 @@ const DefectOperationsPage = ({ darkMode, setDarkMode }) => {
       const now = new Date();
       const fileName = `defect_operations_${now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-')}.xlsx`;
       XLSX.writeFile(workbook, fileName);
+      hideLoading();
       message.success('Файл Excel сформирован');
     } catch (error) {
       console.error('Ошибка экспорта в Excel:', error);
+      hideLoading();
       message.error('Ошибка экспорта в Excel');
     }
   };
 
   return (
     <Layout>
+      {contextHolder}
       <Sidebar darkMode={darkMode} setDarkMode={setDarkMode} />
       <Content style={{ padding: 16 }}>
         <h2>Список браков</h2>

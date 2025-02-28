@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'ftback',
+    'stockman',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -181,6 +182,10 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
         },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
     },
     'loggers': {
         'django.db.backends': {

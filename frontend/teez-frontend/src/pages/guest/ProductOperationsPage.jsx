@@ -15,6 +15,9 @@ const ProductOperationsPage = ({ darkMode, setDarkMode }) => {
     document.title = 'История операций с товарами';
   }, []);
 
+  // Контекст для сообщений (включая loading)
+  const [messageApi, contextHolder] = message.useMessage();
+
   // Состояния для данных и фильтров
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -39,7 +42,7 @@ const ProductOperationsPage = ({ darkMode, setDarkMode }) => {
       .then((response) => {
         const options = response.data.map((item) => ({
           text: item.name,
-          value: item.id, // value – это ID, так как фильтрация идёт по ID
+          value: item.id, // value – это ID, т.к. фильтрация идёт по ID
         }));
         setOperationTypesOptions(options);
       })
@@ -91,7 +94,7 @@ const ProductOperationsPage = ({ darkMode, setDarkMode }) => {
             barcode: item.barcode,
             name: item.name,
             seller: item.seller,
-            operation_type: item.operation_type,
+            operation_type: item.operation_type, // отображается как имя операции
             user: item.user,
             date: item.date,
             comment: item.comment,
@@ -100,7 +103,7 @@ const ProductOperationsPage = ({ darkMode, setDarkMode }) => {
         setTotalCount(response.data.count || 0);
         setCurrentPage(page);
         setPageSize(size);
-        // Если сервер вернул массив штрихкодов без записей, обновляем состояние
+        // Обновляем штрихкоды, для которых не найдены записи
         if (response.data.not_found_barcodes) {
           setNotFoundBarcodes(response.data.not_found_barcodes);
         } else {
@@ -150,6 +153,12 @@ const ProductOperationsPage = ({ darkMode, setDarkMode }) => {
   };
 
   const handleExportExcel = async () => {
+    // Показываем индикатор загрузки
+    const hideLoading = messageApi.open({
+      type: 'loading',
+      content: 'Формирование файла Excel...',
+      duration: 0,
+    });
     try {
       const params = {
         page_size: 500000,
@@ -174,7 +183,7 @@ const ProductOperationsPage = ({ darkMode, setDarkMode }) => {
       const resp = await axios.get(`${API_BASE_URL}/ft/product-operations/`, { params });
       const allResults = resp.data.results || [];
       const wsData = allResults.map((item) => ({
-        'Штрихкод': item.barcode,
+        'Штрихкод': Number(item.barcode),
         'Наименование': item.name || '',
         'Магазин': item.seller || '',
         'Тип операции': item.operation_type || '',
@@ -188,9 +197,11 @@ const ProductOperationsPage = ({ darkMode, setDarkMode }) => {
       const now = new Date();
       const fileName = `product_operations_${now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-')}.xlsx`;
       XLSX.writeFile(workbook, fileName);
+      messageApi.destroy();
       message.success('Файл Excel сформирован');
     } catch (error) {
       console.error('Excel export error:', error);
+      messageApi.destroy();
       message.error('Ошибка экспорта в Excel');
     }
   };
@@ -244,41 +255,45 @@ const ProductOperationsPage = ({ darkMode, setDarkMode }) => {
 
   return (
     <Layout>
+      {contextHolder}
       <Sidebar darkMode={darkMode} setDarkMode={setDarkMode} />
       <Content style={{ padding: 16 }}>
         <h2>История операций с товарами</h2>
-        <Space style={{ marginBottom: 16 }} align="start">
-          <TextArea
-            placeholder="Штрихкоды (каждый в новой строке)"
-            value={barcodesMulti}
-            onChange={(e) => setBarcodesMulti(e.target.value)}
-            style={{ width: 200 }}
-            rows={4}
-          />
-          <TextArea
-            placeholder="Магазины (каждый в новой строке, только цифры)"
-            value={seller}
-            onChange={(e) => setSeller(e.target.value.replace(/[^\d\n]/g, ''))}
-            style={{ width: 200 }}
-            rows={4}
-          />
-          {/* Поле для вывода штрихкодов, для которых не найдены записи */}
+        <Space style={{ marginBottom: 16, width: '100%' }} align="start">
+          {/* Группа фильтров слева */}
+          <Space size="middle">
+            <TextArea
+              placeholder="Штрихкоды (каждый в новой строке)"
+              value={barcodesMulti}
+              onChange={(e) => setBarcodesMulti(e.target.value)}
+              style={{ width: 200 }}
+              rows={4}
+            />
+            <TextArea
+              placeholder="Магазины (каждый в новой строке, только цифры)"
+              value={seller}
+              onChange={(e) => setSeller(e.target.value.replace(/[^\d\n]/g, ''))}
+              style={{ width: 200 }}
+              rows={4}
+            />
+            <RangePicker
+              format="YYYY-MM-DD"
+              value={dateRange}
+              onChange={(values) => setDateRange(values || [])}
+            />
+            <Button type="primary" onClick={handleSearch}>
+              Поиск
+            </Button>
+            <Button onClick={handleExportExcel}>Скачать Excel</Button>
+          </Space>
+          {/* Блок с штрихкодами, для которых не найдены записи, прижат к правому краю */}
           <TextArea
             placeholder="Не найдены штрихкоды"
             value={notFoundBarcodes.join('\n')}
-            style={{ width: 200 }}
+            style={{ width: 200, marginLeft: 'auto' }}
             rows={4}
             readOnly
           />
-          <RangePicker
-            format="YYYY-MM-DD"
-            value={dateRange}
-            onChange={(values) => setDateRange(values || [])}
-          />
-          <Button type="primary" onClick={handleSearch}>
-            Поиск
-          </Button>
-          <Button onClick={handleExportExcel}>Скачать Excel</Button>
         </Space>
         <Pagination
           current={currentPage}

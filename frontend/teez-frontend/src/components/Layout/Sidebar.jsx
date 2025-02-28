@@ -68,7 +68,7 @@ const Sidebar = ({ darkMode, setDarkMode }) => {
     { key: 'defect', label: <Link to="/defect">Браки</Link> },
     { key: 'barcode-history', label: <Link to="/barcode-history">История операций</Link> },
     { key: 'guest-6', label: 'Список товаров на ФС', disabled: true },
-    { key: 'guest-7', label: 'Заказы ФС', disabled: true },
+    { key: 'public-orders', label: <Link to="/public-orders">Заказы ФС</Link> },
     { key: 'guest-8', label: 'Накладные ФС', disabled: true },
   ];
 
@@ -118,12 +118,15 @@ const Sidebar = ({ darkMode, setDarkMode }) => {
   if (location.pathname.startsWith('/barcode-history')) {
     selectedKey = 'barcode-history';
   }
+  if (location.pathname.startsWith('/public-orders')) {
+    selectedKey = 'public-orders';
+  }
   else if (location.pathname.startsWith('/readyphotos')) {
     selectedKey = 'readyphotos';
   }
 
   const defaultOpenKeys = [];
-  if (selectedKey === 'readyphotos' || selectedKey === 'newreadyphotos2' || selectedKey === 'nofoto' || selectedKey === 'defect' || selectedKey === 'barcode-history' ) {
+  if (selectedKey === 'readyphotos' || selectedKey === 'newreadyphotos2' || selectedKey === 'nofoto' || selectedKey === 'defect' || selectedKey === 'barcode-history' || selectedKey === 'public-orders') {
     defaultOpenKeys.push('guestDropdown');
   }
 

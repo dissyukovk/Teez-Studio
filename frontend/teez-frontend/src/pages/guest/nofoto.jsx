@@ -15,6 +15,9 @@ const NofotoPage = ({ darkMode, setDarkMode }) => {
     document.title = 'Товары без фото';
   }, []);
 
+  // Используем message.useMessage для отображения индикатора экспорта Excel
+  const [messageApi, contextHolder] = message.useMessage();
+
   // Состояния для данных и фильтров
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -152,8 +155,14 @@ const NofotoPage = ({ darkMode, setDarkMode }) => {
     fetchData(1, pageSize, ordering);
   };
 
-  // Экспорт данных в Excel
+  // Экспорт данных в Excel с индикатором загрузки
   const handleExportExcel = async () => {
+    // Показываем индикатор загрузки
+    const hideLoading = messageApi.open({
+      type: 'loading',
+      content: 'Формирование файла Excel...',
+      duration: 0,
+    });
     try {
       const params = {
         page_size: 500000,
@@ -196,18 +205,21 @@ const NofotoPage = ({ darkMode, setDarkMode }) => {
         .replace('T', '_')
         .replace(/:/g, '-')}.xlsx`;
       XLSX.writeFile(workbook, fileName);
+      hideLoading();
       message.success('Файл Excel сформирован');
     } catch (error) {
       console.error('Excel export error:', error);
+      hideLoading();
       message.error('Ошибка экспорта в Excel');
     }
   };
 
   return (
     <Layout>
+      {contextHolder}
       <Sidebar darkMode={darkMode} setDarkMode={setDarkMode} />
       <Content style={{ padding: 16 }}>
-        <h2>Список Nofoto</h2>
+        <h2>Список товаров, которые не получилось снять без вскрытия</h2>
         <Space style={{ marginBottom: 16 }} align="start">
           <TextArea
             placeholder="Штрихкоды (каждый в новой строке)"
