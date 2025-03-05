@@ -17,17 +17,28 @@ const Sidebar = ({ darkMode, setDarkMode }) => {
   const [user, setUser] = useState(null);
   const location = useLocation();
 
-  // Загружаем данные пользователя, если есть токен
   useEffect(() => {
-    if (localStorage.getItem('accessToken')) {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      // Если пользователь авторизован, грузим реальные данные
       axiosInstance
         .get('/ft/user-info/')
         .then((res) => {
           setUser(res.data);
+          localStorage.setItem('user', JSON.stringify(res.data));
         })
         .catch((err) => {
           console.error('Ошибка получения данных пользователя', err);
+          // В случае ошибки также записываем "Гость", чтобы не было пустых данных
+          const guestUser = { first_name: 'Гость', last_name: '', groups: ['Гость'] };
+          setUser(guestUser);
+          localStorage.setItem('user', JSON.stringify(guestUser));
         });
+    } else {
+      // Пользователь не авторизован – сохраняем "гостя"
+      const guestUser = { first_name: 'Гость', last_name: '', groups: ['Гость'] };
+      setUser(guestUser);
+      localStorage.setItem('user', JSON.stringify(guestUser));
     }
   }, []);
 
@@ -40,13 +51,16 @@ const Sidebar = ({ darkMode, setDarkMode }) => {
   };
 
   const handleLoginLogout = () => {
-    if (user) {
+    if (user && user.groups && !user.groups.includes('Гость')) {
+      // Пользователь авторизован – выходим
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
       setUser(null);
       message.success('Вы вышли из системы');
       window.location.href = '/login';
     } else {
+      // Пользователь гость – переходим на страницу логина
       window.location.href = '/login';
     }
   };
@@ -73,7 +87,7 @@ const Sidebar = ({ darkMode, setDarkMode }) => {
   ];
 
   const tovarovedMenuItems = [
-    { key: 'tov-1', label: 'Приемка', disabled: true },
+    { key: 'stockman-orders', label: <Link to="/stockman-orders">Заказы (Приемка)</Link> },
     { key: 'tov-2', label: 'Отправка', disabled: true },
     { key: 'tov-3', label: 'Заявки', disabled: true },
     { key: 'tov-4', label: 'Список товаров', disabled: true },
@@ -95,6 +109,7 @@ const Sidebar = ({ darkMode, setDarkMode }) => {
     },
   ];
 
+  // Если у пользователя есть группа "Товаровед" – показываем дополнительные пункты
   if (user && user.groups && user.groups.includes('Товаровед')) {
     menuItems.push({
       key: 'tovDropdown',
@@ -104,7 +119,7 @@ const Sidebar = ({ darkMode, setDarkMode }) => {
     });
   }
 
-  // Определяем, какой пункт меню активен
+  // Логика выбора активного пункта меню
   let selectedKey = 'main';
   if (location.pathname.startsWith('/ready-photos-2')) {
     selectedKey = 'newreadyphotos2';
@@ -121,13 +136,33 @@ const Sidebar = ({ darkMode, setDarkMode }) => {
   if (location.pathname.startsWith('/public-orders')) {
     selectedKey = 'public-orders';
   }
+  if (location.pathname.startsWith('/public-order-detail/')) {
+    selectedKey = 'public-orders';
+  }
+  if (location.pathname.startsWith('/stockman-orders')) {
+    selectedKey = 'stockman-orders';
+  }
+  if (location.pathname.startsWith('/stockman-order-detail/')) {
+    selectedKey = 'stockman-orders';
+  }
   else if (location.pathname.startsWith('/readyphotos')) {
     selectedKey = 'readyphotos';
   }
 
+  // Логика раскрытия подменю
   const defaultOpenKeys = [];
-  if (selectedKey === 'readyphotos' || selectedKey === 'newreadyphotos2' || selectedKey === 'nofoto' || selectedKey === 'defect' || selectedKey === 'barcode-history' || selectedKey === 'public-orders') {
+  if (
+    selectedKey === 'readyphotos' ||
+    selectedKey === 'newreadyphotos2' ||
+    selectedKey === 'nofoto' ||
+    selectedKey === 'defect' ||
+    selectedKey === 'barcode-history' ||
+    selectedKey === 'public-orders'
+  ) {
     defaultOpenKeys.push('guestDropdown');
+  }
+  if (selectedKey === 'stockman-orders') {
+    defaultOpenKeys.push('tovDropdown');
   }
 
   return (

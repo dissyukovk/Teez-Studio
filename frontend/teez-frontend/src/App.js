@@ -10,6 +10,9 @@ import NofotoPage from './pages/guest/nofoto';
 import DefectOperationsPage from './pages/guest/DefectOperationsPage';
 import ProductOperationsPage from './pages/guest/ProductOperationsPage';
 import PublicOrdersPage from './pages/guest/PublicOrders';
+import PublicOrderDetailPage from './pages/guest/PublicOrderDetail';
+import StockmanOrders from './pages/stockman/stockmanorders';
+import StockmanOrderDetailPage from './pages/stockman/stockmanorderdetail';
 
 function App() {
   const [darkMode, setDarkMode] = useState(
@@ -70,6 +73,18 @@ function App() {
           <Route
             path="/public-orders"
             element={<PublicOrdersPage darkMode={darkMode} setDarkMode={setDarkMode} />}
+          />
+          <Route
+            path="/public-order-detail/:order_number"
+            element={<PublicOrderDetailPage darkMode={darkMode} setDarkMode={setDarkMode} />}
+          />
+          <Route
+            path="/stockman-orders"
+            element={<StockmanOrders darkMode={darkMode} setDarkMode={setDarkMode} />}
+          />
+          <Route
+            path="/stockman-order-detail/:order_number"
+            element={<StockmanOrderDetailPage darkMode={darkMode} setDarkMode={setDarkMode} />}
           />
         </Routes>
       </BrowserRouter>

@@ -3,3 +3,8 @@
 /dev2_fletapp
 /fletapp
 /node_modules
+/core/_pycache_
+/stockman/_pycache_
+/ftback/_pycache_
+/core/__init__.py
+/core/migrations

@@ -1,47 +1,70 @@
-import React, { useState, useEffect } from 'react';
-import { Layout, Table, Input, Button, Space, DatePicker, Pagination, message } from 'antd';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Layout, Table, Input, Button, Space, DatePicker, Pagination, message, Modal, Spin } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Layout/Sidebar';
 import axios from 'axios';
-import dayjs from 'dayjs';
 import { API_BASE_URL } from '../../utils/config';
 
 const { Content } = Layout;
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 
-const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
+const StockmanOrders = ({ darkMode, setDarkMode }) => {
+  const navigate = useNavigate();
+
+  // Состояние пользователя и флаг проверки доступа
+  const [user, setUser] = useState(null);
+  const [accessChecked, setAccessChecked] = useState(false);
+
+  // Считываем пользователя из localStorage
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+    setUser(storedUser);
+  }, []);
+
+  // Проверяем группу "Товаровед"
+  useEffect(() => {
+    if (!accessChecked) {
+      // Если пользователь ещё не загружен, пропускаем проверку
+      if (!user || Object.keys(user).length === 0) {
+        return;
+      }
+      if (!user.groups || !user.groups.includes('Товаровед')) {
+        Modal.error({
+          title: 'Ошибка доступа',
+          content: 'У вас нет доступа на эту страницу',
+          okText: 'На главную',
+          onOk: () => navigate('/'),
+        });
+      }
+      setAccessChecked(true);
+    }
+  }, [user, accessChecked, navigate]);
+
+  // Остальные хуки (они вызываются всегда, независимо от проверки доступа)
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // Фильтры
   const [orderNumbers, setOrderNumbers] = useState('');
   const [barcodesMulti, setBarcodesMulti] = useState('');
   const [creationDateRange, setCreationDateRange] = useState([]);
   const [assemblyDateRange, setAssemblyDateRange] = useState([]);
   const [acceptDateRange, setAcceptDateRange] = useState([]);
   const [statusOptions, setStatusOptions] = useState([]);
-  const [statusFilter, setStatusFilter] = useState([]); // <--- тут храним выбранные статусы
-
-  // Параметры сортировки/пагинации
+  const [statusFilter, setStatusFilter] = useState([]);
   const [ordering, setOrdering] = useState('-date');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [totalCount, setTotalCount] = useState(0);
-
-  // Штрихкоды, не найденные при фильтрации
   const [notFoundBarcodes, setNotFoundBarcodes] = useState([]);
 
   useEffect(() => {
     document.title = 'Список заказов';
   }, []);
 
-  // Загрузка списка статусов для фильтра
   useEffect(() => {
     axios
       .get(`${API_BASE_URL}/st/order-statuses/`)
       .then((response) => {
-        // Антд ждет формат { text, value }
         const options = response.data.map((item) => ({
           text: item.name,
           value: item.id,
@@ -54,100 +77,96 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
   }, []);
 
   /**
-   * Основная функция загрузки данных с учётом всех фильтров
-   * @param {number} page
-   * @param {number} size
-   * @param {string} order
-   * @param {number[]} statusesArg - массив id статусов (приоритетнее state)
+   * Функция загрузки данных.
+   * barcodesArg — приоритетный штрихкод, если state barcodesMulti ещё не успел обновиться.
    */
-  const fetchData = async (
-    page = 1,
-    size = 50,
-    order = ordering,
-    statusesArg = null
-  ) => {
-    setLoading(true);
-    try {
-      const params = {
-        page,
-        page_size: size,
-        ordering: order,
-      };
+  const fetchData = useCallback(
+    async (page = 1, size = 50, order = ordering, statusesArg = null, barcodesArg = null) => {
+      setLoading(true);
+      try {
+        const params = {
+          page,
+          page_size: size,
+          ordering: order,
+        };
 
-      // Фильтр по номерам заказа
-      if (orderNumbers.trim()) {
-        const lines = orderNumbers.split('\n').map((l) => l.trim()).filter(Boolean);
-        if (lines.length > 0) {
-          params.order_numbers = lines.join(',');
+        if (orderNumbers.trim()) {
+          const lines = orderNumbers.split('\n').map((l) => l.trim()).filter(Boolean);
+          if (lines.length > 0) {
+            params.order_numbers = lines.join(',');
+          }
         }
-      }
 
-      // Фильтр по штрихкодам
-      if (barcodesMulti.trim()) {
-        const lines = barcodesMulti.split('\n').map((l) => l.trim()).filter(Boolean);
-        if (lines.length > 0) {
-          params.barcodes = lines.join(',');
+        if (barcodesArg) {
+          params.barcodes = barcodesArg;
+        } else if (barcodesMulti.trim()) {
+          const lines = barcodesMulti.split('\n').map((l) => l.trim()).filter(Boolean);
+          if (lines.length > 0) {
+            params.barcodes = lines.join(',');
+          }
         }
+
+        if (creationDateRange.length === 2) {
+          const start = creationDateRange[0].format('DD.MM.YYYY') + ' 00:00:00';
+          const end = creationDateRange[1].format('DD.MM.YYYY') + ' 23:59:59';
+          params.date_from = start;
+          params.date_to = end;
+        }
+
+        if (assemblyDateRange.length === 2) {
+          const start = assemblyDateRange[0].format('DD.MM.YYYY') + ' 00:00:00';
+          const end = assemblyDateRange[1].format('DD.MM.YYYY') + ' 23:59:59';
+          params.assembly_date_from = start;
+          params.assembly_date_to = end;
+        }
+
+        if (acceptDateRange.length === 2) {
+          const start = acceptDateRange[0].format('DD.MM.YYYY') + ' 00:00:00';
+          const end = acceptDateRange[1].format('DD.MM.YYYY') + ' 23:59:59';
+          params.accept_date_from = start;
+          params.accept_date_to = end;
+        }
+
+        const actualStatuses = statusesArg !== null ? statusesArg : statusFilter;
+        if (actualStatuses && actualStatuses.length > 0) {
+          params.statuses = actualStatuses.join(',');
+        }
+
+        const response = await axios.get(`${API_BASE_URL}/st/orders`, { params });
+        const results = response.data.results || [];
+        setData(results.map((item, index) => ({ key: index, ...item })));
+        setTotalCount(response.data.count || 0);
+        setCurrentPage(page);
+        setPageSize(size);
+        if (response.data.not_found_barcodes) {
+          setNotFoundBarcodes(response.data.not_found_barcodes);
+        } else {
+          setNotFoundBarcodes([]);
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки данных', error);
+        message.error('Ошибка загрузки данных');
+      } finally {
+        setLoading(false);
       }
+    },
+    [
+      ordering,
+      orderNumbers,
+      barcodesMulti,
+      creationDateRange,
+      assemblyDateRange,
+      acceptDateRange,
+      statusFilter
+    ]
+  );
 
-      // Фильтр по дате создания
-      if (creationDateRange.length === 2) {
-        const start = creationDateRange[0].format('DD.MM.YYYY') + ' 00:00:00';
-        const end = creationDateRange[1].format('DD.MM.YYYY') + ' 23:59:59';
-        params.date_from = start;
-        params.date_to = end;
-      }
-
-      // Фильтр по дате сборки
-      if (assemblyDateRange.length === 2) {
-        const start = assemblyDateRange[0].format('DD.MM.YYYY') + ' 00:00:00';
-        const end = assemblyDateRange[1].format('DD.MM.YYYY') + ' 23:59:59';
-        params.assembly_date_from = start;
-        params.assembly_date_to = end;
-      }
-
-      // Фильтр по дате приемки
-      if (acceptDateRange.length === 2) {
-        const start = acceptDateRange[0].format('DD.MM.YYYY') + ' 00:00:00';
-        const end = acceptDateRange[1].format('DD.MM.YYYY') + ' 23:59:59';
-        params.accept_date_from = start;
-        params.accept_date_to = end;
-      }
-
-      // Фильтр по статусам (приоритет у параметра, иначе берем из state)
-      const actualStatuses = statusesArg !== null ? statusesArg : statusFilter;
-      if (actualStatuses && actualStatuses.length > 0) {
-        params.statuses = actualStatuses.join(',');
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/st/orders`, { params });
-      const results = response.data.results || [];
-      setData(results.map((item, index) => ({ key: index, ...item })));
-      setTotalCount(response.data.count || 0);
-      setCurrentPage(page);
-      setPageSize(size);
-
-      // not_found_barcodes
-      if (response.data.not_found_barcodes) {
-        setNotFoundBarcodes(response.data.not_found_barcodes);
-      } else {
-        setNotFoundBarcodes([]);
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки данных', error);
-      message.error('Ошибка загрузки данных');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Первичная загрузка (без фильтров)
+  // Первичная загрузка
   useEffect(() => {
     fetchData(currentPage, pageSize, ordering);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Маппинг для сортировки
   const orderingMap = {
     order_number: 'OrderNumber',
     status_name: 'status__name',
@@ -157,49 +176,70 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
     assembly_date: 'assembly_date',
     accept_user: 'accept_user__first_name',
     accept_date: 'accept_date',
+    priority_products: 'priority_products',
   };
 
-  // Вызывается при:
-  // 1) Сортировке (клик по шапке колонки)
-  // 2) Фильтрации (нажатие «OK» в фильтре статусов)
   const handleTableChange = (pagination, filters, sorter) => {
     let newOrdering = ordering;
-
-    // Обработка сортировки
     if (sorter.field) {
       const drfField = orderingMap[sorter.field] || sorter.field;
       newOrdering = sorter.order === 'descend' ? `-${drfField}` : drfField;
       setOrdering(newOrdering);
     }
-
-    // Обработка статусов из filters
     const newStatusFilter = filters.status_name || [];
     setStatusFilter(newStatusFilter);
-
-    // Перезапрашиваем данные
-    const newPage = 1; // сбрасываем на первую страницу при изменении фильтров
+    const newPage = 1;
     setCurrentPage(newPage);
-    // ВАЖНО: передаем newStatusFilter напрямую в fetchData!
     fetchData(newPage, pageSize, newOrdering, newStatusFilter);
   };
 
-  // Пагинация
   const handlePageChange = (page, size) => {
     setCurrentPage(page);
     setPageSize(size);
-    // Здесь используем текущий state statusFilter
     fetchData(page, size, ordering, statusFilter);
   };
 
-  // Поиск по кнопке
   const handleSearch = () => {
-    // Сбрасываем на 1-ю страницу
     setCurrentPage(1);
-    // Здесь тоже передаем statusFilter из стейта
     fetchData(1, pageSize, ordering, statusFilter);
   };
 
-  // Описание колонок
+  // --- Логика "сканирования" (13 цифр + Enter + 1 сек) ---
+  useEffect(() => {
+    let inputBuffer = '';
+    let lastKeyTime = 0;
+
+    const handleKeyDown = (e) => {
+      const activeTag = document.activeElement?.tagName?.toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea') {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastKeyTime > 1000) {
+        inputBuffer = '';
+      }
+      lastKeyTime = now;
+
+      if (/^[0-9]$/.test(e.key)) {
+        inputBuffer += e.key;
+      } else if (e.key === 'Enter') {
+        if (inputBuffer.length === 13) {
+          setBarcodesMulti(inputBuffer);
+          const newStatusFilter = [2, 1, 4];
+          setStatusFilter(newStatusFilter);
+          fetchData(1, pageSize, ordering, newStatusFilter, inputBuffer);
+        }
+        inputBuffer = '';
+      } else {
+        inputBuffer = '';
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [fetchData, ordering, pageSize]);
+
   const columns = [
     {
       title: 'Номер заказа',
@@ -207,7 +247,11 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
       key: 'order_number',
       sorter: true,
       render: (order_number) => (
-        <a href={`/public-order-detail/${order_number}`} target="_blank" rel="noopener noreferrer">
+        <a
+          href={`/stockman-order-detail/${order_number}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           {order_number}
         </a>
       ),
@@ -262,6 +306,13 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
       render: (text, record) =>
         `${record.accepted_products || 0} / ${record.total_products || 0}`,
     },
+    {
+      title: 'Приоритетные товары',
+      dataIndex: 'priority_products',
+      key: 'priority_products',
+      sorter: true,
+      render: (text, record) => record.priority_products || 0,
+    },
   ];
 
   return (
@@ -269,8 +320,6 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
       <Sidebar darkMode={darkMode} setDarkMode={setDarkMode} />
       <Content style={{ padding: 16 }}>
         <h2>Список заказов</h2>
-
-        {/* Фильтры в одну строку, даты вертикально */}
         <Space style={{ marginBottom: 16, width: '100%' }} align="start">
           <Space direction="vertical">
             <div>Поиск по номерам заказа</div>
@@ -282,7 +331,6 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
               rows={6}
             />
           </Space>
-
           <Space direction="vertical">
             <div>Поиск по штрихкодам</div>
             <TextArea
@@ -293,7 +341,6 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
               rows={6}
             />
           </Space>
-
           <Space direction="vertical">
             <div>
               <div>Поиск по дате создания</div>
@@ -320,13 +367,11 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
               />
             </div>
           </Space>
-
           <Space direction="vertical" style={{ marginTop: 'auto' }}>
             <Button type="primary" onClick={handleSearch}>
               Поиск
             </Button>
           </Space>
-
           <Space direction="vertical" style={{ marginLeft: 'auto' }}>
             <div>Не найдены штрихкоды</div>
             <TextArea
@@ -338,7 +383,6 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
             />
           </Space>
         </Space>
-
         <Pagination
           current={currentPage}
           pageSize={pageSize}
@@ -349,7 +393,6 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
           showTotal={(total) => `Всего ${total} записей`}
           style={{ marginBottom: 16 }}
         />
-
         <Table
           columns={columns}
           dataSource={data}
@@ -362,4 +405,4 @@ const PublicOrdersPage = ({ darkMode, setDarkMode }) => {
   );
 };
 
-export default PublicOrdersPage;
+export default StockmanOrders;
