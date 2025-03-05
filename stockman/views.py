@@ -5,7 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.filters import OrderingFilter
 from django.db.models import Count, Q, ExpressionWrapper, F, DurationField
+from django_filters.rest_framework import DjangoFilterBackend
 from datetime import datetime
 from core.models import (
     Order,
@@ -23,9 +25,12 @@ from core.models import (
 from .serializers import (
     OrderSerializer,
     OrderStatusSerializer,
-    OrderDetailSerializer
+    OrderDetailSerializer,
+    STRequestSerializer,
+    STRequestDetailSerializer
     )
 from .pagination import StandardResultsSetPagination
+from .filters import STRequestFilter
 
 #список заказов
 class OrderListView(generics.ListAPIView):
@@ -410,3 +415,43 @@ def strequest_create_barcodes(request):
     }
     
     return Response(response_data, status=status.HTTP_201_CREATED)
+
+#Список заявок для товароведов
+class STRequestSearchListView(generics.ListAPIView):
+    """
+    Эндпоинт для поиска заявок STRequest с фильтрацией, сортировкой и пагинацией.
+    """
+    serializer_class = STRequestSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_class = STRequestFilter
+    ordering_fields = [
+        'RequestNumber',
+        'creation_date',
+        'stockman__first_name',
+        'photo_date',
+        'photographer__first_name',
+        'products_count',
+        'priority_products_count'
+    ]
+    ordering = ['RequestNumber']
+    pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        qs = STRequest.objects.all().annotate(
+            products_count=Count('strequestproduct_set'),
+            priority_products_count=Count('strequestproduct_set', filter=Q(strequestproduct_set__product__priority=True))
+        )
+        return qs
+
+#Детальная информация заявки
+class STRequestDetailView(generics.RetrieveAPIView):
+    """
+    Эндпоинт для получения детальной информации по заявке.
+    URL: strequest-detail/<STRequestNumber>/
+    """
+    queryset = STRequest.objects.all()
+    serializer_class = STRequestDetailSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'RequestNumber'
+    lookup_url_kwarg = 'STRequestNumber'

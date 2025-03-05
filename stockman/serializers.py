@@ -6,7 +6,8 @@ from core.models import (
     OrderProduct,
     Product,
     STRequest,
-    STRequestStatus
+    STRequestStatus,
+    STRequestProduct
     )
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -276,6 +277,64 @@ class STRequestSerializer(serializers.ModelSerializer):
 
     def get_products_count(self, obj):
         # Если не указан related_name в модели STRequestProduct, по умолчанию используется strequestproduct_set
+        return obj.strequestproduct_set.count()
+
+    def get_priority_products_count(self, obj):
+        return obj.strequestproduct_set.filter(product__priority=True).count()
+
+class STRequestProductDetailSerializer(serializers.ModelSerializer):
+    barcode = serializers.CharField(source='product.barcode')
+    name = serializers.CharField(source='product.name')
+    income_stockman = serializers.SerializerMethodField()
+    income_date = serializers.DateTimeField(
+        source='product.income_date', format="%d.%m.%Y %H:%M:%S", allow_null=True
+    )
+    
+    class Meta:
+        model = STRequestProduct
+        fields = ('barcode', 'name', 'income_stockman', 'income_date')
+    
+    def get_income_stockman(self, obj):
+        user = obj.product.income_stockman
+        if user:
+            return f"{user.first_name} {user.last_name}".strip()
+        return None
+
+class STRequestDetailSerializer(serializers.ModelSerializer):
+    creation_date = serializers.DateTimeField(format="%d.%m.%Y %H:%M:%S", read_only=True)
+    photo_date = serializers.DateTimeField(format="%d.%m.%Y %H:%M:%S", read_only=True, allow_null=True)
+    stockman = serializers.SerializerMethodField()
+    photographer = serializers.SerializerMethodField()
+    status = STRequestStatusSerializer(read_only=True)
+    products_count = serializers.SerializerMethodField()
+    priority_products_count = serializers.SerializerMethodField()
+    products = STRequestProductDetailSerializer(source='strequestproduct_set', many=True, read_only=True)
+    
+    class Meta:
+        model = STRequest
+        fields = [
+            'RequestNumber',
+            'creation_date',
+            'status',
+            'stockman',
+            'photo_date',
+            'photographer',
+            'products_count',
+            'priority_products_count',
+            'products'
+        ]
+    
+    def get_stockman(self, obj):
+        if obj.stockman:
+            return f"{obj.stockman.first_name} {obj.stockman.last_name}".strip()
+        return None
+
+    def get_photographer(self, obj):
+        if obj.photographer:
+            return f"{obj.photographer.first_name} {obj.photographer.last_name}".strip()
+        return None
+
+    def get_products_count(self, obj):
         return obj.strequestproduct_set.count()
 
     def get_priority_products_count(self, obj):
